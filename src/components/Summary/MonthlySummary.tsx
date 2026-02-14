@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, IconButton, Typography, List, ListItem, ListItemText, Divider, Chip, Button, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import { Box, IconButton, Typography, List, ListItem, ListItemText, Divider, Chip, Button } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import TodayIcon from '@mui/icons-material/Today';
@@ -51,11 +51,14 @@ function getWeekBreakdowns(
   return weeks;
 }
 
-export function MonthlySummary() {
+interface MonthlySummaryProps {
+  includeSpecial: boolean;
+}
+
+export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
-  const [includeSpecial, setIncludeSpecial] = useState(true);
 
   const expenses = useExpensesByMonth(year, month);
 
@@ -147,19 +150,6 @@ export function MonthlySummary() {
         >
           今月
         </Button>
-      </Box>
-
-      {/* 特別な支出フィルタ */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, mt: 1 }}>
-        <ToggleButtonGroup
-          size="small"
-          value={includeSpecial}
-          exclusive
-          onChange={(_, newValue) => newValue !== null && setIncludeSpecial(newValue)}
-        >
-          <ToggleButton value={true}>全ての支出</ToggleButton>
-          <ToggleButton value={false}>通常の支出のみ</ToggleButton>
-        </ToggleButtonGroup>
       </Box>
 
       {/* 月合計・平均 */}

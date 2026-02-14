@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, IconButton, List, ListItem, ListItemText, Typography, Divider, Button, ToggleButton, ToggleButtonGroup } from '@mui/material';
+import { Box, IconButton, List, ListItem, ListItemText, Typography, Divider, Button } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import TodayIcon from '@mui/icons-material/Today';
@@ -10,11 +10,14 @@ import { formatCurrency } from '../../utils/format';
 import { aggregateByCategory } from '../../utils/chart';
 import { CategoryDonutChart } from './CategoryDonutChart';
 
-export function WeeklySummary() {
+interface WeeklySummaryProps {
+  includeSpecial: boolean;
+}
+
+export function WeeklySummary({ includeSpecial }: WeeklySummaryProps) {
   const today = new Date();
   const { start: initialStart } = getWeekRange(today);
   const [weekStart, setWeekStart] = useState(initialStart);
-  const [includeSpecial, setIncludeSpecial] = useState(true);
 
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 6);
@@ -142,19 +145,6 @@ export function WeeklySummary() {
         >
           今週
         </Button>
-      </Box>
-
-      {/* 特別な支出フィルタ */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, mt: 1 }}>
-        <ToggleButtonGroup
-          size="small"
-          value={includeSpecial}
-          exclusive
-          onChange={(_, newValue) => newValue !== null && setIncludeSpecial(newValue)}
-        >
-          <ToggleButton value={true}>全ての支出</ToggleButton>
-          <ToggleButton value={false}>通常の支出のみ</ToggleButton>
-        </ToggleButtonGroup>
       </Box>
 
       {/* カテゴリ別ドーナツチャート */}

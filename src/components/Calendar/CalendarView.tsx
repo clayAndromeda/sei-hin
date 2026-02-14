@@ -152,7 +152,7 @@ export function CalendarView() {
                 </Tooltip>
               </ToggleButton>
               <ToggleButton value={false}>
-                <Tooltip title="通常の支出のみ">
+                <Tooltip title="特別な支出を除く">
                   <MoneyOffIcon fontSize="small" />
                 </Tooltip>
               </ToggleButton>

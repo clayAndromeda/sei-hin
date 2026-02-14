@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Box, Tabs, Tab } from '@mui/material';
+import { Box, Tabs, Tab, ToggleButtonGroup, ToggleButton } from '@mui/material';
 import { WeeklySummary } from './WeeklySummary';
 import { MonthlySummary } from './MonthlySummary';
 
 export function SummaryView() {
   const [tab, setTab] = useState(0);
+  const [includeSpecial, setIncludeSpecial] = useState(true);
 
   return (
     <Box
@@ -24,8 +25,21 @@ export function SummaryView() {
         <Tab label="月次" />
       </Tabs>
 
-      {tab === 0 && <WeeklySummary />}
-      {tab === 1 && <MonthlySummary />}
+      {/* 特別な支出フィルタ */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+        <ToggleButtonGroup
+          size="small"
+          value={includeSpecial}
+          exclusive
+          onChange={(_, newValue) => newValue !== null && setIncludeSpecial(newValue)}
+        >
+          <ToggleButton value={true}>特別な支出を含む</ToggleButton>
+          <ToggleButton value={false}>特別な支出を除く</ToggleButton>
+        </ToggleButtonGroup>
+      </Box>
+
+      {tab === 0 && <WeeklySummary includeSpecial={includeSpecial} />}
+      {tab === 1 && <MonthlySummary includeSpecial={includeSpecial} />}
     </Box>
   );
 }
