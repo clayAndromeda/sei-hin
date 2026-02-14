@@ -13,19 +13,25 @@ import {
   Tab,
   useMediaQuery,
   useTheme,
+  Fab,
+  Tooltip,
 } from '@mui/material';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import SettingsIcon from '@mui/icons-material/Settings';
 import SyncIcon from '@mui/icons-material/Sync';
+import AddIcon from '@mui/icons-material/Add';
 import { CalendarView } from './components/Calendar/CalendarView';
 import { SummaryView } from './components/Summary/SummaryView';
 import { SettingsView } from './components/Settings/SettingsView';
+import { ExpenseDialog } from './components/ExpenseDialog/ExpenseDialog';
 import { useSync } from './hooks/useSync';
 import { handleAuthCallback } from './services/dropbox';
+import { toDateString } from './utils/date';
 
 function App() {
   const [activeTab, setActiveTab] = useState(0);
+  const [todayExpenseDialogOpen, setTodayExpenseDialogOpen] = useState(false);
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
@@ -37,6 +43,9 @@ function App() {
     setConnected,
     triggerSync,
   } = useSync();
+
+  // 今日の日付を取得
+  const todayDateStr = toDateString(new Date());
 
   // OAuthコールバック処理
   useEffect(() => {
@@ -135,6 +144,30 @@ function App() {
           />
         )}
       </Box>
+
+      {/* 今日の支出を追加するFAB */}
+      <Tooltip title="今日の支出を追加" placement="top">
+        <Fab
+          color="primary"
+          onClick={() => setTodayExpenseDialogOpen(true)}
+          sx={{
+            position: 'fixed',
+            bottom: { xs: 72, md: 24 }, // モバイルはBottomNavigationの上
+            left: { xs: 24, md: 'auto' }, // モバイルは左下
+            right: { xs: 'auto', md: 24 }, // PCは右下
+            zIndex: (theme) => theme.zIndex.speedDial,
+          }}
+        >
+          <AddIcon />
+        </Fab>
+      </Tooltip>
+
+      {/* 今日の支出入力ダイアログ */}
+      <ExpenseDialog
+        open={todayExpenseDialogOpen}
+        date={todayDateStr}
+        onClose={() => setTodayExpenseDialogOpen(false)}
+      />
 
       {/* モバイル版: 下部ナビゲーション */}
       {!isDesktop && (
