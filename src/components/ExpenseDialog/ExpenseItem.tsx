@@ -44,6 +44,18 @@ export function ExpenseItem({ expense, onDelete, onEdit }: ExpenseItemProps) {
                 height: 20,
               }}
             />
+            {expense.isSpecial && (
+              <Chip
+                label="★"
+                size="small"
+                color="warning"
+                sx={{
+                  fontSize: '0.8rem',
+                  height: 20,
+                  minWidth: 24,
+                }}
+              />
+            )}
             {formatCurrency(expense.amount)}
           </Box>
         }

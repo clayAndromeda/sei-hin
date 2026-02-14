@@ -14,9 +14,10 @@ export function WeekSummaryRow({
   weekBudget,
   onBudgetClick,
 }: WeekSummaryRowProps) {
-  // 予算との差分計算
+  // 予算との差分計算と背景色の判定
   let budgetText = '';
   let budgetColor = 'text.secondary';
+  let backgroundColor = 'action.hover'; // デフォルト背景色
 
   if (weekBudget !== null) {
     const remaining = weekBudget - weekTotal;
@@ -25,6 +26,7 @@ export function WeekSummaryRow({
     } else {
       budgetText = ` | 予算超過: ${formatCurrency(Math.abs(remaining))}`;
       budgetColor = 'error.main';
+      backgroundColor = 'error.light'; // 予算超過時は薄い赤背景
     }
   }
 
@@ -36,7 +38,7 @@ export function WeekSummaryRow({
         justifyContent: 'space-between',
         px: { xs: 1, sm: 1.5 },
         py: { xs: 0.5, sm: 0.75 },
-        backgroundColor: 'action.hover',
+        backgroundColor: backgroundColor, // 動的に変更
         borderRadius: 1,
         mt: { xs: 0.5, sm: 0.75 },
       }}

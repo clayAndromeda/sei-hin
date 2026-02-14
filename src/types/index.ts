@@ -8,6 +8,7 @@ export interface Expense {
   createdAt: string; // ISO 8601 datetime
   updatedAt: string; // ISO 8601 datetime
   deleted?: boolean; // 削除フラグ（同期用）
+  isSpecial?: boolean; // 特別な支出フラグ（予算外の支出）
 }
 
 // Dropboxに保存するデータ全体

@@ -6,6 +6,8 @@ import ViewWeekIcon from '@mui/icons-material/ViewWeek';
 import TodayIcon from '@mui/icons-material/Today';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import MoneyOffIcon from '@mui/icons-material/MoneyOff';
 import { CalendarGrid } from './CalendarGrid';
 import { ExpenseDialog } from '../ExpenseDialog/ExpenseDialog';
 import { WeekBudgetDialog } from './WeekBudgetDialog';
@@ -22,15 +24,21 @@ export function CalendarView() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<CalendarViewMode>('weekly');
+  const [includeSpecial, setIncludeSpecial] = useState(true);
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
   const expenses = useExpensesByMonth(year, month);
 
-  const monthTotal = expenses.reduce((sum, e) => sum + e.amount, 0);
+  // 特別な支出のフィルタリング
+  const filteredExpenses = includeSpecial
+    ? expenses
+    : expenses.filter(e => !e.isSpecial);
+
+  const monthTotal = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   // カテゴリ別集計
-  const categoryTotals = aggregateByCategory(expenses);
+  const categoryTotals = aggregateByCategory(filteredExpenses);
 
   // 月の平均計算
   const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
@@ -113,22 +121,43 @@ export function CalendarView() {
           </Box>
 
           {/* モード切り替え */}
-          <ToggleButtonGroup
-            size="small"
-            value={viewMode}
-            exclusive
-            onChange={(_, newMode) => newMode && setViewMode(newMode)}
-          >
-            <ToggleButton value="weekly">
-              <ViewWeekIcon fontSize="small" />
-            </ToggleButton>
-            <ToggleButton value="current-week">
-              <TodayIcon fontSize="small" />
-            </ToggleButton>
-            <ToggleButton value="simple">
-              <CalendarMonthIcon fontSize="small" />
-            </ToggleButton>
-          </ToggleButtonGroup>
+          <Box sx={{ display: 'flex', gap: 1 }}>
+            <ToggleButtonGroup
+              size="small"
+              value={viewMode}
+              exclusive
+              onChange={(_, newMode) => newMode && setViewMode(newMode)}
+            >
+              <ToggleButton value="weekly">
+                <ViewWeekIcon fontSize="small" />
+              </ToggleButton>
+              <ToggleButton value="current-week">
+                <TodayIcon fontSize="small" />
+              </ToggleButton>
+              <ToggleButton value="simple">
+                <CalendarMonthIcon fontSize="small" />
+              </ToggleButton>
+            </ToggleButtonGroup>
+
+            {/* 特別な支出フィルタ */}
+            <ToggleButtonGroup
+              size="small"
+              value={includeSpecial}
+              exclusive
+              onChange={(_, newValue) => newValue !== null && setIncludeSpecial(newValue)}
+            >
+              <ToggleButton value={true}>
+                <Tooltip title="特別な支出を含む">
+                  <AttachMoneyIcon fontSize="small" />
+                </Tooltip>
+              </ToggleButton>
+              <ToggleButton value={false}>
+                <Tooltip title="通常の支出のみ">
+                  <MoneyOffIcon fontSize="small" />
+                </Tooltip>
+              </ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
         </Box>
 
         {/* 月合計（モバイルのみ表示） */}
@@ -150,7 +179,7 @@ export function CalendarView() {
         <CalendarGrid
           year={year}
           month={month}
-          expenses={expenses}
+          expenses={filteredExpenses}
           onDateClick={(dateStr) => setSelectedDate(dateStr)}
           onWeekBudgetClick={(weekStart) => setSelectedWeekStart(weekStart)}
           viewMode={viewMode}

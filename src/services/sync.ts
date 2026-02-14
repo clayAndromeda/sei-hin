@@ -50,6 +50,7 @@ export async function performSync(): Promise<void> {
       const remoteExpenses = downloaded.data.expenses.map((e) => ({
         ...e,
         category: e.category ?? 'food',
+        isSpecial: e.isSpecial ?? false,
       }));
       // 3. マージ
       mergedExpenses = mergeExpenses(localExpenses, remoteExpenses);
@@ -82,6 +83,7 @@ export async function performSync(): Promise<void> {
           const retryRemote = retryDownload.data.expenses.map((e) => ({
             ...e,
             category: e.category ?? 'food',
+            isSpecial: e.isSpecial ?? false,
           }));
           const retryMerged = mergeExpenses(mergedExpenses, retryRemote);
 

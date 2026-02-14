@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, IconButton, Typography, List, ListItem, ListItemText, Divider, Chip, Button } from '@mui/material';
+import { Box, IconButton, Typography, List, ListItem, ListItemText, Divider, Chip, Button, ToggleButton, ToggleButtonGroup } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import TodayIcon from '@mui/icons-material/Today';
@@ -55,6 +55,7 @@ export function MonthlySummary() {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
+  const [includeSpecial, setIncludeSpecial] = useState(true);
 
   const expenses = useExpensesByMonth(year, month);
 
@@ -63,10 +64,19 @@ export function MonthlySummary() {
   const prevYear = month === 0 ? year - 1 : year;
   const prevMonthExpenses = useExpensesByMonth(prevYear, prevMonth);
 
-  const monthTotal = expenses.reduce((sum, e) => sum + e.amount, 0);
+  // 特別な支出のフィルタリング
+  const filteredExpenses = includeSpecial
+    ? expenses
+    : expenses.filter(e => !e.isSpecial);
+
+  const filteredPrevMonthExpenses = includeSpecial
+    ? prevMonthExpenses
+    : prevMonthExpenses.filter(e => !e.isSpecial);
+
+  const monthTotal = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
 
   // 前月の合計
-  const prevMonthTotal = prevMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const prevMonthTotal = filteredPrevMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
   const monthDiff = monthTotal - prevMonthTotal;
   const monthDiffPercent = prevMonthTotal > 0 ? Math.round((monthDiff / prevMonthTotal) * 100) : 0;
 
@@ -78,7 +88,7 @@ export function MonthlySummary() {
 
   // 日付ごとの金額マップ
   const expensesByDate = new Map<string, number>();
-  for (const e of expenses) {
+  for (const e of filteredExpenses) {
     expensesByDate.set(e.date, (expensesByDate.get(e.date) ?? 0) + e.amount);
   }
 
@@ -86,7 +96,7 @@ export function MonthlySummary() {
 
   // カテゴリ別集計
   const categoryTotals = new Map<string, number>();
-  for (const e of expenses) {
+  for (const e of filteredExpenses) {
     const cat = e.category ?? 'food';
     categoryTotals.set(cat, (categoryTotals.get(cat) ?? 0) + e.amount);
   }
@@ -137,6 +147,19 @@ export function MonthlySummary() {
         >
           今月
         </Button>
+      </Box>
+
+      {/* 特別な支出フィルタ */}
+      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2, mt: 1 }}>
+        <ToggleButtonGroup
+          size="small"
+          value={includeSpecial}
+          exclusive
+          onChange={(_, newValue) => newValue !== null && setIncludeSpecial(newValue)}
+        >
+          <ToggleButton value={true}>全ての支出</ToggleButton>
+          <ToggleButton value={false}>通常の支出のみ</ToggleButton>
+        </ToggleButtonGroup>
       </Box>
 
       {/* 月合計・平均 */}

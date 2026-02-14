@@ -37,6 +37,25 @@ export class SeihinDB extends Dexie {
       metadata: 'key',
       weekBudgets: 'weekStart',
     });
+
+    // v4: isSpecialフィールド追加
+    this.version(4)
+      .stores({
+        expenses: 'id, date, category, createdAt, updatedAt',
+        metadata: 'key',
+        weekBudgets: 'weekStart',
+      })
+      .upgrade((tx) => {
+        // 既存レコードにデフォルト値を設定
+        return tx
+          .table('expenses')
+          .toCollection()
+          .modify((expense) => {
+            if (expense.isSpecial === undefined) {
+              expense.isSpecial = false;
+            }
+          });
+      });
   }
 }
 

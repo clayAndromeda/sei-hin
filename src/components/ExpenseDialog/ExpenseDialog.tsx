@@ -11,6 +11,8 @@ import {
   Typography,
   Box,
   Chip,
+  FormControlLabel,
+  Checkbox,
 } from '@mui/material';
 import { ExpenseItem } from './ExpenseItem';
 import {
@@ -33,6 +35,7 @@ export function ExpenseDialog({ open, date, onClose }: ExpenseDialogProps) {
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
   const [category, setCategory] = useState<string>(DEFAULT_CATEGORY);
+  const [isSpecial, setIsSpecial] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // ダイアログを閉じたらフォームをリセット
@@ -41,6 +44,7 @@ export function ExpenseDialog({ open, date, onClose }: ExpenseDialogProps) {
       setAmount('');
       setMemo('');
       setCategory(DEFAULT_CATEGORY);
+      setIsSpecial(false);
       setEditingId(null);
     }
   }, [open]);
@@ -52,22 +56,24 @@ export function ExpenseDialog({ open, date, onClose }: ExpenseDialogProps) {
     if (!parsedAmount || parsedAmount <= 0) return;
 
     if (editingId) {
-      await updateExpense(editingId, parsedAmount, memo, category);
+      await updateExpense(editingId, parsedAmount, memo, category, isSpecial);
       setEditingId(null);
     } else {
-      await addExpense(date, parsedAmount, memo, category);
+      await addExpense(date, parsedAmount, memo, category, isSpecial);
     }
 
     setAmount('');
     setMemo('');
     setCategory(DEFAULT_CATEGORY);
+    setIsSpecial(false);
   };
 
-  const handleEdit = (expense: { id: string; amount: number; memo: string; category: string }) => {
+  const handleEdit = (expense: { id: string; amount: number; memo: string; category: string; isSpecial?: boolean }) => {
     setEditingId(expense.id);
     setAmount(String(expense.amount));
     setMemo(expense.memo);
     setCategory(expense.category);
+    setIsSpecial(expense.isSpecial ?? false);
   };
 
   const handleDelete = async (id: string) => {
@@ -87,6 +93,7 @@ export function ExpenseDialog({ open, date, onClose }: ExpenseDialogProps) {
     setAmount('');
     setMemo('');
     setCategory(DEFAULT_CATEGORY);
+    setIsSpecial(false);
   };
 
   // 日付表示用: "YYYY-MM-DD" → "YYYY年M月D日"
@@ -122,6 +129,19 @@ export function ExpenseDialog({ open, date, onClose }: ExpenseDialogProps) {
             />
           ))}
         </Box>
+
+        {/* 特別な支出フラグ */}
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={isSpecial}
+              onChange={(e) => setIsSpecial(e.target.checked)}
+              size="small"
+            />
+          }
+          label="特別な支出として登録する（予算から除外できる）"
+          sx={{ mb: 1 }}
+        />
 
         {/* 入力フォーム */}
         <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
