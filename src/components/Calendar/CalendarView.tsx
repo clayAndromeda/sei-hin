@@ -1,13 +1,11 @@
 import { useState } from 'react';
-import { Box, IconButton, Typography, ToggleButton, ToggleButtonGroup, Tooltip, useMediaQuery, useTheme, Paper, Divider, List, ListItem, ListItemText } from '@mui/material';
+import { Box, IconButton, Typography, ToggleButton, ToggleButtonGroup, Tooltip, useMediaQuery, useTheme, Paper, Divider, List, ListItem, ListItemText, FormControlLabel, Switch } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import ViewWeekIcon from '@mui/icons-material/ViewWeek';
 import TodayIcon from '@mui/icons-material/Today';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
-import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
-import MoneyOffIcon from '@mui/icons-material/MoneyOff';
 import { CalendarGrid } from './CalendarGrid';
 import { ExpenseDialog } from '../ExpenseDialog/ExpenseDialog';
 import { WeekBudgetDialog } from './WeekBudgetDialog';
@@ -24,16 +22,16 @@ export function CalendarView() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<CalendarViewMode>('weekly');
-  const [includeSpecial, setIncludeSpecial] = useState(true);
+  const [excludeSpecial, setExcludeSpecial] = useState(false);
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
   const expenses = useExpensesByMonth(year, month);
 
   // 特別な支出のフィルタリング
-  const filteredExpenses = includeSpecial
-    ? expenses
-    : expenses.filter(e => !e.isSpecial);
+  const filteredExpenses = excludeSpecial
+    ? expenses.filter(e => !e.isSpecial)
+    : expenses;
 
   const monthTotal = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
 
@@ -121,7 +119,7 @@ export function CalendarView() {
           </Box>
 
           {/* モード切り替え */}
-          <Box sx={{ display: 'flex', gap: 1 }}>
+          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
             <ToggleButtonGroup
               size="small"
               value={viewMode}
@@ -140,23 +138,17 @@ export function CalendarView() {
             </ToggleButtonGroup>
 
             {/* 特別な支出フィルタ */}
-            <ToggleButtonGroup
-              size="small"
-              value={includeSpecial}
-              exclusive
-              onChange={(_, newValue) => newValue !== null && setIncludeSpecial(newValue)}
-            >
-              <ToggleButton value={true}>
-                <Tooltip title="特別な支出を含む">
-                  <AttachMoneyIcon fontSize="small" />
-                </Tooltip>
-              </ToggleButton>
-              <ToggleButton value={false}>
-                <Tooltip title="特別な支出を除く">
-                  <MoneyOffIcon fontSize="small" />
-                </Tooltip>
-              </ToggleButton>
-            </ToggleButtonGroup>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={excludeSpecial}
+                  onChange={(e) => setExcludeSpecial(e.target.checked)}
+                  size="small"
+                />
+              }
+              label="特別な支出を除く"
+              sx={{ ml: 1, mb: 0 }}
+            />
           </Box>
         </Box>
 

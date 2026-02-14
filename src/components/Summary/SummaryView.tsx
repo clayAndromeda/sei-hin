@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { Box, Tabs, Tab, ToggleButtonGroup, ToggleButton } from '@mui/material';
+import { Box, Tabs, Tab, FormControlLabel, Switch } from '@mui/material';
 import { WeeklySummary } from './WeeklySummary';
 import { MonthlySummary } from './MonthlySummary';
 
 export function SummaryView() {
   const [tab, setTab] = useState(0);
-  const [includeSpecial, setIncludeSpecial] = useState(true);
+  const [excludeSpecial, setExcludeSpecial] = useState(false);
+
+  // includeSpecialは除外フラグの逆
+  const includeSpecial = !excludeSpecial;
 
   return (
     <Box
@@ -27,15 +30,16 @@ export function SummaryView() {
 
       {/* 特別な支出フィルタ */}
       <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-        <ToggleButtonGroup
-          size="small"
-          value={includeSpecial}
-          exclusive
-          onChange={(_, newValue) => newValue !== null && setIncludeSpecial(newValue)}
-        >
-          <ToggleButton value={true}>特別な支出を含む</ToggleButton>
-          <ToggleButton value={false}>特別な支出を除く</ToggleButton>
-        </ToggleButtonGroup>
+        <FormControlLabel
+          control={
+            <Switch
+              checked={excludeSpecial}
+              onChange={(e) => setExcludeSpecial(e.target.checked)}
+              size="small"
+            />
+          }
+          label="特別な支出を除く"
+        />
       </Box>
 
       {tab === 0 && <WeeklySummary includeSpecial={includeSpecial} />}
