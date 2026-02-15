@@ -1,7 +1,7 @@
 import { Box, Typography } from '@mui/material';
 import { DayCell } from './DayCell';
 import { WeekSummaryRow } from './WeekSummaryRow';
-import { getMonthDays, isSameDay, WEEKDAY_LABELS, toDateString, getWeekStartString } from '../../utils/date';
+import { getMonthDays, isSameDay, WEEKDAY_LABELS, toDateString, getWeekStartString, isInMonth } from '../../utils/date';
 import { useWeekBudget } from '../../hooks/useWeekBudget';
 import type { Expense, CalendarViewMode } from '../../types';
 
@@ -16,7 +16,7 @@ interface CalendarGridProps {
 
 // 週ごとのデータ構造
 interface WeekData {
-  days: (Date | null)[]; // 7日分
+  days: Date[]; // 7日分（前月・次月の日付も含む）
   weekStart: string; // 週開始日（月曜）のYYYY-MM-DD
 }
 
@@ -35,27 +35,15 @@ export function CalendarGrid({ year, month, expenses, onDateClick, onWeekBudgetC
   const weeks: WeekData[] = [];
   for (let i = 0; i < 6; i++) {
     const weekDays = days.slice(i * 7, i * 7 + 7);
-
-    // 週開始日を特定（最初の非null日付から計算、全てnullの場合は推測）
-    let weekStart = '';
-    const firstNonNullDay = weekDays.find(d => d !== null);
-    if (firstNonNullDay) {
-      weekStart = getWeekStartString(firstNonNullDay);
-    } else {
-      // 全てnullの週（通常は発生しないが念のため）
-      // 仮の日付として週インデックスから推測
-      const referenceDate = new Date(year, month, 1 + i * 7);
-      weekStart = getWeekStartString(referenceDate);
-    }
-
-    weeks.push({
-      days: weekDays,
-      weekStart,
-    });
+    const weekStart = getWeekStartString(weekDays[0]);
+    weeks.push({ days: weekDays, weekStart });
   }
 
+  // 当月に属する日付が1つもない週を除外
+  const validWeeks = weeks.filter(w => w.days.some(d => isInMonth(d, year, month)));
+
   // モードに応じて表示する週をフィルタリング
-  let displayWeeks = weeks;
+  let displayWeeks = validWeeks;
 
   if (viewMode === 'current-week') {
     // 今日が表示中の月に含まれるかチェック
@@ -64,14 +52,13 @@ export function CalendarGrid({ year, month, expenses, onDateClick, onWeekBudgetC
     if (isTodayInCurrentMonth) {
       // 今日が含まれる週を表示
       const currentWeekStart = getWeekStartString(today);
-      const currentWeek = weeks.find(w => w.weekStart === currentWeekStart);
+      const currentWeek = validWeeks.find(w => w.weekStart === currentWeekStart);
       if (currentWeek) {
         displayWeeks = [currentWeek];
       }
     } else {
       // 今日が含まれない月の場合、表示中の月の最初の週を表示
-      // 最初の非nullの日付がある週を探す
-      const firstWeekWithDates = weeks.find(w => w.days.some(d => d !== null));
+      const firstWeekWithDates = validWeeks[0];
       if (firstWeekWithDates) {
         displayWeeks = [firstWeekWithDates];
       }
@@ -107,13 +94,11 @@ export function CalendarGrid({ year, month, expenses, onDateClick, onWeekBudgetC
 
       {/* 週ごとのセクション */}
       {displayWeeks.map((week, weekIndex) => {
-        // 週合計を計算
+        // 週合計を計算（前月・次月の日付も含む）
         let weekTotal = 0;
         for (const date of week.days) {
-          if (date) {
-            const dateStr = toDateString(date);
-            weekTotal += dailyTotals.get(dateStr) ?? 0;
-          }
+          const dateStr = toDateString(date);
+          weekTotal += dailyTotals.get(dateStr) ?? 0;
         }
 
         return (
@@ -122,6 +107,8 @@ export function CalendarGrid({ year, month, expenses, onDateClick, onWeekBudgetC
             week={week}
             weekTotal={weekTotal}
             today={today}
+            year={year}
+            month={month}
             dailyTotals={dailyTotals}
             onDateClick={onDateClick}
             onWeekBudgetClick={onWeekBudgetClick}
@@ -138,6 +125,8 @@ interface WeekSectionProps {
   week: WeekData;
   weekTotal: number;
   today: Date;
+  year: number;
+  month: number;
   dailyTotals: Map<string, number>;
   onDateClick: (dateString: string) => void;
   onWeekBudgetClick: (weekStart: string) => void;
@@ -148,6 +137,8 @@ function WeekSection({
   week,
   weekTotal,
   today,
+  year,
+  month,
   dailyTotals,
   onDateClick,
   onWeekBudgetClick,
@@ -166,9 +157,10 @@ function WeekSection({
         }}
       >
         {week.days.map((date, dayIndex) => {
-          const dateStr = date ? toDateString(date) : '';
-          const amount = date ? (dailyTotals.get(dateStr) ?? 0) : 0;
-          const isToday = date ? isSameDay(date, today) : false;
+          const dateStr = toDateString(date);
+          const amount = dailyTotals.get(dateStr) ?? 0;
+          const isToday = isSameDay(date, today);
+          const otherMonth = !isInMonth(date, year, month);
 
           return (
             <DayCell
@@ -176,7 +168,8 @@ function WeekSection({
               date={date}
               amount={amount}
               isToday={isToday}
-              onClick={() => date && onDateClick(dateStr)}
+              otherMonth={otherMonth}
+              onClick={() => onDateClick(dateStr)}
             />
           );
         })}

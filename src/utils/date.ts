@@ -13,7 +13,8 @@ export function formatDateJP(date: Date): string {
 
 // 月のカレンダーグリッド用日付配列を返す（月曜始まり）
 // 前月・次月のパディング含む6週分（42日）の配列
-export function getMonthDays(year: number, month: number): (Date | null)[] {
+// すべてのマスに実際のDateオブジェクトを返す（月をまたぐ週の合計計算に必要）
+export function getMonthDays(year: number, month: number): Date[] {
   // month は 0-indexed (0=1月)
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
@@ -21,11 +22,11 @@ export function getMonthDays(year: number, month: number): (Date | null)[] {
   // 月曜始まりの曜日インデックス (月=0, 火=1, ... 日=6)
   const startDayOfWeek = (firstDay.getDay() + 6) % 7;
 
-  const days: (Date | null)[] = [];
+  const days: Date[] = [];
 
-  // 前月のパディング
-  for (let i = 0; i < startDayOfWeek; i++) {
-    days.push(null);
+  // 前月のパディング（実際の日付を返す）
+  for (let i = startDayOfWeek - 1; i >= 0; i--) {
+    days.push(new Date(year, month, -i));
   }
 
   // 当月の日付
@@ -34,11 +35,17 @@ export function getMonthDays(year: number, month: number): (Date | null)[] {
   }
 
   // 次月のパディング（6行=42マスになるまで）
+  let nextDay = 1;
   while (days.length < 42) {
-    days.push(null);
+    days.push(new Date(year, month + 1, nextDay++));
   }
 
   return days;
+}
+
+// 日付が指定月に属するかどうかを判定
+export function isInMonth(date: Date, year: number, month: number): boolean {
+  return date.getFullYear() === year && date.getMonth() === month;
 }
 
 // 指定日を含む月曜始まりの週の開始日（月曜）と終了日（日曜）を返す

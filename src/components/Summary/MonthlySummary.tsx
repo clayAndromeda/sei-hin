@@ -176,9 +176,7 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
       </Box>
 
       {/* カテゴリ別ドーナツチャート */}
-      {categoryTotals.size > 0 && (
-        <CategoryDonutChart categoryTotals={categoryTotals} total={monthTotal} />
-      )}
+      <CategoryDonutChart categoryTotals={categoryTotals} total={monthTotal} />
 
       {/* カテゴリ別内訳 */}
       {categoryTotals.size > 0 && (

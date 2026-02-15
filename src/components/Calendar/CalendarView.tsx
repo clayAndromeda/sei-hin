@@ -9,7 +9,8 @@ import MyLocationIcon from '@mui/icons-material/MyLocation';
 import { CalendarGrid } from './CalendarGrid';
 import { ExpenseDialog } from '../ExpenseDialog/ExpenseDialog';
 import { WeekBudgetDialog } from './WeekBudgetDialog';
-import { useExpensesByMonth } from '../../hooks/useExpenses';
+import { useExpensesByDateRange } from '../../hooks/useExpenses';
+import { getMonthDays, toDateString } from '../../utils/date';
 import { formatCurrency } from '../../utils/format';
 import { aggregateByCategory } from '../../utils/chart';
 import { CategoryDonutChart } from '../Summary/CategoryDonutChart';
@@ -26,17 +27,27 @@ export function CalendarView() {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
-  const expenses = useExpensesByMonth(year, month);
+  // カレンダーグリッド全体（42日分）の日付範囲を取得
+  const calendarDays = getMonthDays(year, month);
+  const calendarStart = toDateString(calendarDays[0]);
+  const calendarEnd = toDateString(calendarDays[calendarDays.length - 1]);
+
+  // カレンダー全体の支出を取得（月をまたぐ週の合計を正しく計算するため）
+  const allExpenses = useExpensesByDateRange(calendarStart, calendarEnd);
 
   // 特別な支出のフィルタリング
   const filteredExpenses = excludeSpecial
-    ? expenses.filter(e => !e.isSpecial)
-    : expenses;
+    ? allExpenses.filter(e => !e.isSpecial)
+    : allExpenses;
 
-  const monthTotal = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
+  // 月合計・カテゴリ集計は当月分のみ
+  const monthStartStr = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+  const monthEndStr = `${year}-${String(month + 1).padStart(2, '0')}-31`;
+  const monthExpenses = filteredExpenses.filter(e => e.date >= monthStartStr && e.date <= monthEndStr);
+  const monthTotal = monthExpenses.reduce((sum, e) => sum + e.amount, 0);
 
-  // カテゴリ別集計
-  const categoryTotals = aggregateByCategory(filteredExpenses);
+  // カテゴリ別集計（当月分のみ）
+  const categoryTotals = aggregateByCategory(monthExpenses);
 
   // 月の平均計算
   const lastDayOfMonth = new Date(year, month + 1, 0).getDate();

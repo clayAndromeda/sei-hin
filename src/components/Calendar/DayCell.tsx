@@ -1,19 +1,16 @@
-import { Box, ButtonBase, Typography } from '@mui/material';
+import { ButtonBase, Typography } from '@mui/material';
 import { formatCurrency } from '../../utils/format';
 import { isFutureDate } from '../../utils/date';
 
 interface DayCellProps {
-  date: Date | null;
+  date: Date;
   amount: number;
   isToday: boolean;
+  otherMonth?: boolean; // 表示中の月以外の日付
   onClick: () => void;
 }
 
-export function DayCell({ date, amount, isToday, onClick }: DayCellProps) {
-  if (!date) {
-    return <Box sx={{ aspectRatio: '1', minHeight: { xs: 48, sm: 56, md: 64 } }} />;
-  }
-
+export function DayCell({ date, amount, isToday, otherMonth = false, onClick }: DayCellProps) {
   const future = isFutureDate(date);
 
   return (
@@ -28,7 +25,8 @@ export function DayCell({ date, amount, isToday, onClick }: DayCellProps) {
         justifyContent: 'center',
         borderRadius: 1,
         backgroundColor: isToday ? 'primary.light' : 'transparent',
-        color: isToday ? 'primary.contrastText' : 'text.primary',
+        color: isToday ? 'primary.contrastText' : otherMonth ? 'text.disabled' : 'text.primary',
+        opacity: otherMonth ? 0.4 : 1,
         border: isToday ? 2 : 0,
         borderColor: isToday ? 'primary.main' : 'transparent',
         transition: 'all 0.2s ease',

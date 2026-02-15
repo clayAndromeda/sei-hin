@@ -148,9 +148,7 @@ export function WeeklySummary({ includeSpecial }: WeeklySummaryProps) {
       </Box>
 
       {/* カテゴリ別ドーナツチャート */}
-      {categoryTotals.size > 0 && (
-        <CategoryDonutChart categoryTotals={categoryTotals} total={weekTotal} />
-      )}
+      <CategoryDonutChart categoryTotals={categoryTotals} total={weekTotal} />
 
       {/* 日別リスト */}
       <List dense>

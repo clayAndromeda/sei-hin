@@ -17,7 +17,13 @@ export function CategoryDonutChart({
   const chartData = categoryMapToChartData(categoryTotals);
 
   if (chartData.length === 0) {
-    return null;
+    return (
+      <Box sx={{ textAlign: 'center', py: 4 }}>
+        <Typography variant="body2" color="text.secondary">
+          この期間のデータはありません
+        </Typography>
+      </Box>
+    );
   }
 
   return (
