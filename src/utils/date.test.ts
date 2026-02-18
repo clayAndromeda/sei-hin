@@ -8,6 +8,7 @@ import {
   getWeekStartString,
   isSameDay,
   isFutureDate,
+  getRemainingDaysInWeek,
   WEEKDAY_LABELS,
 } from './date';
 
@@ -208,5 +209,53 @@ describe('isFutureDate', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 1, 14, 12, 0, 0));
     expect(isFutureDate(new Date(2026, 1, 14))).toBe(false);
+  });
+});
+
+describe('getRemainingDaysInWeek', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('週の月曜日が今日の場合、7日を返す', () => {
+    // 2026-02-09 は月曜日
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 1, 9));
+    expect(getRemainingDaysInWeek('2026-02-09')).toBe(7);
+  });
+
+  it('今日が水曜日の場合、残り5日を返す（水〜日）', () => {
+    // 2026-02-11 は水曜日、週開始は 2026-02-09（月曜）
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 1, 11));
+    expect(getRemainingDaysInWeek('2026-02-09')).toBe(5);
+  });
+
+  it('今日が日曜日（週の最終日）の場合、1日を返す', () => {
+    // 2026-02-15 は日曜日、週開始は 2026-02-09
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 1, 15));
+    expect(getRemainingDaysInWeek('2026-02-09')).toBe(1);
+  });
+
+  it('過去の週の場合、0を返す', () => {
+    // 今日: 2026-02-16、先週の月曜: 2026-02-02
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 1, 16));
+    expect(getRemainingDaysInWeek('2026-02-02')).toBe(0);
+  });
+
+  it('未来の週の場合、7を返す', () => {
+    // 今日: 2026-02-09、来週の月曜: 2026-02-16
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 1, 9));
+    expect(getRemainingDaysInWeek('2026-02-16')).toBe(7);
+  });
+
+  it('今日が土曜日の場合、残り2日を返す（土・日）', () => {
+    // 2026-02-14 は土曜日、週開始は 2026-02-09
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 1, 14));
+    expect(getRemainingDaysInWeek('2026-02-09')).toBe(2);
   });
 });

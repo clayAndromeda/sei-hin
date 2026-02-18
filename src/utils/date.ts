@@ -85,3 +85,19 @@ export function isFutureDate(date: Date): boolean {
   target.setHours(0, 0, 0, 0);
   return target > today;
 }
+
+// 指定の週開始日（月曜YYYY-MM-DD）から、今日を含む残り日数を返す
+// 過去の週 → 0、未来の週 → 7
+export function getRemainingDaysInWeek(weekStart: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const start = new Date(weekStart + 'T00:00:00');
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6); // 日曜日
+
+  if (today > end) return 0; // 過去の週
+  if (today < start) return 7; // 未来の週
+
+  // 今日から日曜日までの日数（今日を含む）
+  return Math.floor((end.getTime() - today.getTime()) / 86400000) + 1;
+}
