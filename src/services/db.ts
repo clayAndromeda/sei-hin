@@ -56,6 +56,25 @@ export class SeihinDB extends Dexie {
             }
           });
       });
+
+    // v5: WeekBudgetにupdatedAt, deletedフィールド追加（同期対応）
+    this.version(5)
+      .stores({
+        expenses: 'id, date, category, createdAt, updatedAt',
+        metadata: 'key',
+        weekBudgets: 'weekStart',
+      })
+      .upgrade((tx) => {
+        const now = new Date().toISOString();
+        return tx
+          .table('weekBudgets')
+          .toCollection()
+          .modify((weekBudget) => {
+            if (!weekBudget.updatedAt) {
+              weekBudget.updatedAt = now;
+            }
+          });
+      });
   }
 }
 

@@ -11,11 +11,19 @@ export interface Expense {
   isSpecial?: boolean; // 特別な支出フラグ（予算外の支出）
 }
 
+// デフォルト週予算の同期用データ
+export interface DefaultWeekBudgetSync {
+  budget: number;
+  updatedAt: string; // ISO 8601 datetime
+}
+
 // Dropboxに保存するデータ全体
 export interface SeihinData {
-  version: 1 | 2;
+  version: 1 | 2 | 3;
   updatedAt: string; // ISO 8601 datetime
   expenses: Expense[];
+  weekBudgets?: WeekBudget[]; // v3で追加（後方互換のためoptional）
+  defaultWeekBudget?: DefaultWeekBudgetSync; // v3で追加（後方互換のためoptional）
 }
 
 // メタデータ（IndexedDB用）
@@ -28,6 +36,8 @@ export interface Metadata {
 export interface WeekBudget {
   weekStart: string; // 週の開始日（月曜日のYYYY-MM-DD形式）
   budget: number; // 週予算（円）
+  updatedAt: string; // ISO 8601 datetime（同期マージ用）
+  deleted?: boolean; // 削除フラグ（同期用）
 }
 
 // カレンダー表示モード

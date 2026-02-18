@@ -24,8 +24,8 @@ export function useWeekBudget(weekStartDate: string): number | null {
 
   const defaultBudget = useDefaultWeekBudget();
 
-  // 個別設定が存在すればそれを、なければデフォルトを返す
-  if (weekBudget !== undefined) {
+  // 個別設定が存在し、削除されていなければそれを返す
+  if (weekBudget !== undefined && !weekBudget.deleted) {
     return weekBudget.budget;
   }
   return defaultBudget;
@@ -33,9 +33,14 @@ export function useWeekBudget(weekStartDate: string): number | null {
 
 // デフォルト週予算を設定
 export async function setDefaultWeekBudget(budget: number): Promise<void> {
+  const now = new Date().toISOString();
   await db.metadata.put({
     key: 'defaultWeekBudget',
     value: String(budget),
+  });
+  await db.metadata.put({
+    key: 'defaultWeekBudgetUpdatedAt',
+    value: now,
   });
 }
 
@@ -47,10 +52,18 @@ export async function setWeekBudget(
   await db.weekBudgets.put({
     weekStart: weekStartDate,
     budget,
+    updatedAt: new Date().toISOString(),
   });
 }
 
-// 個別の週予算を削除（デフォルトに戻す）
+// 個別の週予算を論理削除（デフォルトに戻す）
 export async function deleteWeekBudget(weekStartDate: string): Promise<void> {
-  await db.weekBudgets.delete(weekStartDate);
+  const existing = await db.weekBudgets.get(weekStartDate);
+  if (existing) {
+    await db.weekBudgets.put({
+      ...existing,
+      deleted: true,
+      updatedAt: new Date().toISOString(),
+    });
+  }
 }

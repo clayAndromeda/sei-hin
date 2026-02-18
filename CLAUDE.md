@@ -70,20 +70,20 @@ npm run test:watch # テストをウォッチモードで実行
 
 ```
 src/
-├── types/index.ts          # 型定義（Expense, WeekBudget, SeihinData）
+├── types/index.ts          # 型定義（Expense, WeekBudget, DefaultWeekBudgetSync, SeihinData）
 ├── constants/
 │   ├── categories.ts      # カテゴリ定義（食費/交通費/娯楽費/書籍代/その他）
 │   └── categories.test.ts # categories.tsのテスト
 ├── services/
 │   ├── db.ts              # Dexie DB定義（expenses, metadata, weekBudgets）
 │   ├── dropbox.ts         # Dropbox OAuth PKCE + アップロード/ダウンロード
-│   ├── sync.ts            # 同期マージロジック（updatedAt比較、論理削除）
-│   ├── sync.test.ts       # sync.tsのテスト（mergeExpenses等）
+│   ├── sync.ts            # 同期マージロジック（expenses + weekBudgets + defaultWeekBudget）
+│   ├── sync.test.ts       # sync.tsのテスト（mergeExpenses, mergeWeekBudgets, mergeDefaultWeekBudget）
 │   └── crypto.ts          # AES-256-GCM暗号化（※未実装想定）
 ├── hooks/
 │   ├── useExpenses.ts     # 食費CRUD + リアクティブクエリ（useLiveQuery）
 │   ├── useSync.ts         # 同期状態管理（起動時自動同期、30秒デバウンス）
-│   └── useWeekBudget.ts   # 週予算CRUD
+│   └── useWeekBudget.ts   # 週予算CRUD（論理削除対応、updatedAt付与）
 ├── utils/
 │   ├── date.ts            # 日付ユーティリティ（月曜始まり、YYYY-MM-DD形式）
 │   ├── date.test.ts       # date.tsのテスト
@@ -120,18 +120,19 @@ src/
 
 - UIは`useLiveQuery`でリアクティブに更新
 - Dropbox同期はバックグラウンドで実行
-- マージ戦略: 同一IDは`updatedAt`が新しい方を採用
+- マージ戦略: 同一ID/weekStartは`updatedAt`が新しい方を採用
 - 削除: 論理削除（`deleted: true`）→同期後に物理削除
+- 同期対象: expenses, weekBudgets, defaultWeekBudget
 
 ### 同期フロー（sync.ts）
 
-1. ローカルの全データ取得（削除済み含む）
+1. ローカルの全データ取得（expenses, weekBudgets, defaultWeekBudget、削除済み含む）
 2. Dropboxから`/data.json`をダウンロード
-3. マージ（updatedAt比較、カテゴリデフォルト補完）
-4. ローカルに一括保存（`clear` → `bulkAdd`）
-5. Dropboxにアップロード（`rev`で楽観的ロック）
+3. マージ（updatedAt比較、カテゴリデフォルト補完、weekBudgets後方互換）
+4. ローカルに一括保存（expenses + weekBudgets を同一トランザクションで`clear` → `bulkAdd`）
+5. Dropboxにアップロード（`rev`で楽観的ロック、SeihinData version: 3）
 6. 競合時（409エラー）は再マージして再試行
-7. 削除済みレコードを物理削除
+7. 削除済みレコードを物理削除（expenses + weekBudgets）
 8. 最終同期日時を`metadata`テーブルに保存
 
 ### DB設計（Dexie）
@@ -139,13 +140,14 @@ src/
 **テーブル:**
 - `expenses`: 支出記録（id, date, category, createdAt, updatedAt）
 - `metadata`: KVストア（Dropboxトークン、最終同期日時）
-- `weekBudgets`: 週予算（weekStart=月曜日のYYYY-MM-DD、budget）
+- `weekBudgets`: 週予算（weekStart=月曜日のYYYY-MM-DD、budget、updatedAt、deleted）
 
 **スキーマバージョン履歴:**
 - **v1**: 初期（expenses, metadata）
 - **v2**: categoryフィールド追加
 - **v3**: weekBudgetsテーブル追加
 - **v4**: isSpecialフィールド追加（予算外支出フラグ）
+- **v5**: WeekBudgetにupdatedAt, deletedフィールド追加（Dropbox同期対応）
 
 ### UI構成
 
@@ -181,10 +183,20 @@ src/
 - `isConnected()`: refreshToken存在確認
 - `disconnect()`: トークン削除
 
+### hooks/useWeekBudget.ts
+
+- `useDefaultWeekBudget()`: デフォルト週予算をリアクティブ取得
+- `useWeekBudget(weekStartDate)`: 特定週の予算を取得（個別設定 or デフォルト、deleted除外）
+- `setDefaultWeekBudget(budget)`: デフォルト週予算を設定（updatedAt保存）
+- `setWeekBudget(weekStartDate, budget)`: 週予算を個別設定（updatedAt付与）
+- `deleteWeekBudget(weekStartDate)`: 論理削除（デフォルトに戻す）
+
 ### services/sync.ts
 
-- `performSync()`: 同期実行（排他制御あり、isSyncingフラグ）
-- `mergeExpenses(local, remote)`: マージロジック（updatedAt比較）
+- `performSync()`: 同期実行（expenses + weekBudgets + defaultWeekBudget、排他制御あり）
+- `mergeExpenses(local, remote)`: expensesマージロジック（ID基準、updatedAt比較）
+- `mergeWeekBudgets(local, remote)`: weekBudgetsマージロジック（weekStart基準、updatedAt比較）
+- `mergeDefaultWeekBudget(local, remote)`: defaultWeekBudgetマージ（updatedAt比較）
 
 ## データ形式・規約
 

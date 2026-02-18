@@ -17,9 +17,10 @@ interface WeekBudgetDialogProps {
   open: boolean;
   weekStart: string; // 週開始日（YYYY-MM-DD）
   onClose: () => void;
+  onDataChanged?: () => void;
 }
 
-export function WeekBudgetDialog({ open, weekStart, onClose }: WeekBudgetDialogProps) {
+export function WeekBudgetDialog({ open, weekStart, onClose, onDataChanged }: WeekBudgetDialogProps) {
   const currentBudget = useWeekBudget(weekStart);
   const [budgetInput, setBudgetInput] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
@@ -42,6 +43,7 @@ export function WeekBudgetDialog({ open, weekStart, onClose }: WeekBudgetDialogP
     try {
       setError(null);
       await setWeekBudget(weekStart, value);
+      onDataChanged?.();
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : '保存に失敗しました');
@@ -52,6 +54,7 @@ export function WeekBudgetDialog({ open, weekStart, onClose }: WeekBudgetDialogP
     try {
       setError(null);
       await deleteWeekBudget(weekStart);
+      onDataChanged?.();
       onClose();
     } catch (err) {
       setError(err instanceof Error ? err.message : '削除に失敗しました');

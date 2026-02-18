@@ -28,6 +28,7 @@ interface SettingsViewProps {
   syncError: string | null;
   connected: boolean;
   onConnectionChange: (connected: boolean) => void;
+  onDataChanged?: () => void;
 }
 
 export function SettingsView({
@@ -37,6 +38,7 @@ export function SettingsView({
   syncError,
   connected,
   onConnectionChange,
+  onDataChanged,
 }: SettingsViewProps) {
   const [dropboxError, setDropboxError] = useState<string | null>(null);
   const defaultWeekBudget = useDefaultWeekBudget();
@@ -71,6 +73,7 @@ export function SettingsView({
     try {
       setBudgetError(null);
       await setDefaultWeekBudget(value);
+      onDataChanged?.();
       setBudgetInput('');
     } catch (error) {
       setBudgetError(
