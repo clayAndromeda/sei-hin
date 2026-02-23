@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -47,6 +47,25 @@ function App() {
 
   // 今日の日付を取得
   const todayDateStr = toDateString(new Date());
+
+  // スクロール方向検知でFABの表示/非表示を制御
+  const [fabVisible, setFabVisible] = useState(true);
+  const lastScrollTop = useRef(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollTop = window.scrollY;
+      // 上スクロール or 最上部付近 → 表示、下スクロール → 非表示
+      if (currentScrollTop <= 0 || currentScrollTop < lastScrollTop.current) {
+        setFabVisible(true);
+      } else if (currentScrollTop > lastScrollTop.current) {
+        setFabVisible(false);
+      }
+      lastScrollTop.current = currentScrollTop;
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   // OAuthコールバック処理
   useEffect(() => {
@@ -128,7 +147,7 @@ function App() {
       <Box
         sx={{
           flexGrow: 1,
-          pb: { xs: '56px', md: 0 },
+          pb: { xs: '128px', md: 0 },
           overflow: 'auto',
         }}
       >
@@ -158,6 +177,10 @@ function App() {
             left: { xs: 24, md: 'auto' }, // モバイルは左下
             right: { xs: 'auto', md: 24 }, // PCは右下
             zIndex: (theme) => theme.zIndex.speedDial,
+            transition: 'transform 0.3s ease, opacity 0.3s ease',
+            transform: fabVisible ? 'translateY(0)' : 'translateY(80px)',
+            opacity: fabVisible ? 1 : 0,
+            pointerEvents: fabVisible ? 'auto' : 'none',
           }}
         >
           <AddIcon />
