@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { Box, IconButton, List, ListItem, ListItemText, Typography, Divider, Button } from '@mui/material';
+import { Box, IconButton, Typography, Divider, Button } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import TodayIcon from '@mui/icons-material/Today';
-import { getWeekRange, toDateString, WEEKDAY_LABELS, isFutureDate } from '../../utils/date';
+import { getWeekRange, toDateString } from '../../utils/date';
 import { useExpensesByDateRange } from '../../hooks/useExpenses';
 import { useWeekBudget } from '../../hooks/useWeekBudget';
 import { formatCurrency } from '../../utils/format';
 import { aggregateByCategory } from '../../utils/chart';
 import { CategoryDonutChart } from './CategoryDonutChart';
+import { DailyBarChart } from './DailyBarChart';
 
 interface WeeklySummaryProps {
   includeSpecial: boolean;
@@ -150,20 +151,8 @@ export function WeeklySummary({ includeSpecial }: WeeklySummaryProps) {
       {/* カテゴリ別ドーナツチャート */}
       <CategoryDonutChart categoryTotals={categoryTotals} total={weekTotal} />
 
-      {/* 日別リスト */}
-      <List dense>
-        {dailyTotals.map((item, i) => (
-          <ListItem key={item.dateStr}>
-            <ListItemText
-              primary={`${WEEKDAY_LABELS[i]} ${formatShortDate(item.date)}`}
-              sx={{ flex: '0 0 auto', minWidth: 80 }}
-            />
-            <Typography variant="body2" sx={{ ml: 'auto' }}>
-              {isFutureDate(item.date) ? '−' : formatCurrency(item.total)}
-            </Typography>
-          </ListItem>
-        ))}
-      </List>
+      {/* 日別棒グラフ */}
+      <DailyBarChart dailyTotals={dailyTotals} expenses={filteredExpenses} />
 
       <Divider sx={{ my: 1 }} />
 

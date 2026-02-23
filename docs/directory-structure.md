@@ -9,7 +9,7 @@ src/
 ├── utils/        # ユーティリティ（日付、金額フォーマット、グラフ変換）
 ├── components/   # UIコンポーネント
 │   ├── Calendar/       # カレンダー画面
-│   ├── Summary/        # サマリー画面
+│   ├── Summary/        # サマリー画面（ドーナツチャート、日別棒グラフ）
 │   ├── Settings/       # 設定画面
 │   └── ExpenseDialog/  # 支出入力ダイアログ
 ├── App.tsx       # メインアプリ（タブナビゲーション、同期UI）
