@@ -10,6 +10,7 @@ import { formatCurrency } from '../../utils/format';
 import { aggregateByCategory } from '../../utils/chart';
 import { CategoryDonutChart } from './CategoryDonutChart';
 import { DailyBarChart } from './DailyBarChart';
+import { ExpenseListSection } from './ExpenseListSection';
 
 interface WeeklySummaryProps {
   includeSpecial: boolean;
@@ -201,6 +202,9 @@ export function WeeklySummary({ includeSpecial }: WeeklySummaryProps) {
           </Typography>
         )}
       </Box>
+
+      {/* 支出一覧（メモ確認用） */}
+      <ExpenseListSection expenses={filteredExpenses} />
     </Box>
   );
 }

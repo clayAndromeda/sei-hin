@@ -8,6 +8,7 @@ import { formatCurrency } from '../../utils/format';
 import { toDateString } from '../../utils/date';
 import { CATEGORIES } from '../../constants/categories';
 import { CategoryDonutChart } from './CategoryDonutChart';
+import { ExpenseListSection } from './ExpenseListSection';
 
 interface WeekBreakdown {
   label: string;
@@ -224,6 +225,9 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
           </ListItem>
         ))}
       </List>
+
+      {/* 支出一覧（メモ確認用） */}
+      <ExpenseListSection expenses={filteredExpenses} />
     </Box>
   );
 }
