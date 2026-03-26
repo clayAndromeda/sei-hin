@@ -105,7 +105,7 @@ export function ExpenseDialog({ open, date, onClose }: ExpenseDialogProps) {
     : '';
 
   const parsedAmount = parseInt(amount, 10);
-  const isValid = !isNaN(parsedAmount) && parsedAmount > 0;
+  const isValid = !isNaN(parsedAmount) && parsedAmount > 0 && memo.trim().length > 0;
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
@@ -158,6 +158,8 @@ export function ExpenseDialog({ open, date, onClose }: ExpenseDialogProps) {
             label="メモ"
             value={memo}
             onChange={(e) => setMemo(e.target.value)}
+            required
+            error={memo.length > 0 && memo.trim().length === 0}
             size="small"
             sx={{ flex: 2 }}
           />

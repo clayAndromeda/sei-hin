@@ -75,6 +75,23 @@ export class SeihinDB extends Dexie {
             }
           });
       });
+    // v6: 既存の空メモを「（なし）」に更新
+    this.version(6)
+      .stores({
+        expenses: 'id, date, category, createdAt, updatedAt',
+        metadata: 'key',
+        weekBudgets: 'weekStart',
+      })
+      .upgrade((tx) => {
+        return tx
+          .table('expenses')
+          .toCollection()
+          .modify((expense) => {
+            if (!expense.memo || expense.memo.trim() === '') {
+              expense.memo = '（なし）';
+            }
+          });
+      });
   }
 }
 
