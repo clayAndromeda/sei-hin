@@ -7,6 +7,8 @@ interface WeekSummaryRowProps {
   weekStart: string; // 週開始日（YYYY-MM-DD）
   weekTotal: number; // 週合計金額
   weekBudget: number | null; // 週予算（null = 未設定）
+  todaySpent: number; // 今日の支出合計
+  isCurrentWeek: boolean; // 今週かどうか
   onBudgetClick: () => void; // 予算設定ボタンクリック時のハンドラー
 }
 
@@ -14,6 +16,8 @@ export function WeekSummaryRow({
   weekStart,
   weekTotal,
   weekBudget,
+  todaySpent,
+  isCurrentWeek,
   onBudgetClick,
 }: WeekSummaryRowProps) {
   // 予算との差分計算と背景色の判定
@@ -23,6 +27,8 @@ export function WeekSummaryRow({
 
   // 1日あたり使える金額の計算
   let dailyBudgetText = '';
+  let todayRemainingText = '';
+  let todayRemainingColor = 'success.main';
   const remainingDays = getRemainingDaysInWeek(weekStart);
 
   if (weekBudget !== null) {
@@ -33,6 +39,17 @@ export function WeekSummaryRow({
       if (remainingDays > 0) {
         const dailyAmount = Math.floor(remaining / remainingDays);
         dailyBudgetText = `1日あたり: ${formatCurrency(dailyAmount)}（残り${remainingDays}日）`;
+
+        // 今週の場合、今日の残り予算を表示
+        if (isCurrentWeek) {
+          const spentBeforeToday = weekTotal - todaySpent;
+          const dailyAllocation = Math.floor((weekBudget - spentBeforeToday) / remainingDays);
+          const todayRemaining = dailyAllocation - todaySpent;
+          todayRemainingText = `今日の残り: ${formatCurrency(todayRemaining)}`;
+          if (todayRemaining < 0) {
+            todayRemainingColor = 'error.main';
+          }
+        }
       }
     } else {
       budgetText = ` | 予算超過: ${formatCurrency(Math.abs(remaining))}`;
@@ -79,6 +96,19 @@ export function WeekSummaryRow({
           }}
         >
           {dailyBudgetText}
+        </Typography>
+      )}
+      {todayRemainingText && (
+        <Typography
+          variant="body2"
+          sx={{
+            fontWeight: 'bold',
+            color: todayRemainingColor,
+            fontSize: { xs: '0.8rem', sm: '0.85rem', md: '0.9rem' },
+            mt: 0.25,
+          }}
+        >
+          {todayRemainingText}
         </Typography>
       )}
     </Box>

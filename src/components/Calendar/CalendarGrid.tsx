@@ -145,6 +145,9 @@ function WeekSection({
   showSummary,
 }: WeekSectionProps) {
   const weekBudget = useWeekBudget(week.weekStart);
+  const todayStr = toDateString(today);
+  const todaySpent = dailyTotals.get(todayStr) ?? 0;
+  const isCurrentWeek = getWeekStartString(today) === week.weekStart;
 
   return (
     <Box sx={{ mb: { xs: 1, sm: 1.5 } }}>
@@ -181,6 +184,8 @@ function WeekSection({
           weekStart={week.weekStart}
           weekTotal={weekTotal}
           weekBudget={weekBudget}
+          todaySpent={todaySpent}
+          isCurrentWeek={isCurrentWeek}
           onBudgetClick={() => onWeekBudgetClick(week.weekStart)}
         />
       )}
