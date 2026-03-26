@@ -22,7 +22,11 @@ export function mergeExpenses(
     }
   }
 
-  return Array.from(merged.values());
+  // 空メモを「（なし）」に正規化
+  return Array.from(merged.values()).map((e) => ({
+    ...e,
+    memo: !e.memo || e.memo.trim() === '' ? '（なし）' : e.memo,
+  }));
 }
 
 // 週予算のマージロジック: weekStartをキーにupdatedAtで新しい方を採用
