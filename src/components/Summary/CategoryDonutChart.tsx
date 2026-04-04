@@ -80,6 +80,11 @@ export function CategoryDonutChart({
             </Box>
             <Typography variant="body2" fontWeight="medium">
               {formatCurrency(item.value)}
+              {total > 0 && (
+                <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 0.5 }}>
+                  ({Math.round((item.value / total) * 100)}%)
+                </Typography>
+              )}
             </Typography>
           </Box>
         ))}

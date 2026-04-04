@@ -3,12 +3,15 @@ import {
   Box,
   Typography,
   Divider,
-  List,
-  ListItem,
-  ListItemText,
-  Chip,
   Collapse,
   ListItemButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Chip,
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
@@ -44,7 +47,7 @@ export function ExpenseListSection({ expenses }: ExpenseListSectionProps) {
   if (expenses.length === 0) return null;
 
   // メモ付きの支出数
-  const withMemo = expenses.filter((e) => e.memo).length;
+  const withMemo = expenses.filter((e) => e.memo && e.memo !== '（なし）').length;
   const grouped = groupByDate(expenses);
 
   return (
@@ -60,58 +63,121 @@ export function ExpenseListSection({ expenses }: ExpenseListSectionProps) {
         {open ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
       </ListItemButton>
       <Collapse in={open}>
-        <Box sx={{ px: 1, pb: 1 }}>
-          {[...grouped.entries()].map(([date, items]) => (
-            <Box key={date} sx={{ mb: 1 }}>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ pl: 1, fontWeight: 'bold' }}
-              >
-                {formatDateLabel(date)}
-              </Typography>
-              <List dense disablePadding>
-                {items.map((expense) => {
+        <TableContainer sx={{ px: 1, pb: 1 }}>
+          <Table size="small" sx={{ '& td, & th': { py: 0.5, px: 0.75 } }}>
+            <TableHead>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 'bold', fontSize: '0.75rem', color: 'text.secondary' }}>
+                  日付
+                </TableCell>
+                <TableCell sx={{ fontWeight: 'bold', fontSize: '0.75rem', color: 'text.secondary' }}>
+                  カテゴリ
+                </TableCell>
+                <TableCell align="right" sx={{ fontWeight: 'bold', fontSize: '0.75rem', color: 'text.secondary' }}>
+                  金額
+                </TableCell>
+                <TableCell sx={{ fontWeight: 'bold', fontSize: '0.75rem', color: 'text.secondary' }}>
+                  メモ
+                </TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {[...grouped.entries()].map(([date, items]) => {
+                const dayTotal = items.reduce((sum, e) => sum + e.amount, 0);
+                return items.map((expense, idx) => {
                   const cat = getCategoryById(expense.category);
+                  const isLastInGroup = idx === items.length - 1;
                   return (
-                    <ListItem key={expense.id} disablePadding sx={{ pl: 1 }}>
-                      <ListItemText
-                        primary={
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <TableRow
+                      key={expense.id}
+                      sx={{
+                        // ストライプ背景（日付グループ単位で交互）
+                        backgroundColor: [...grouped.keys()].indexOf(date) % 2 === 0
+                          ? 'transparent'
+                          : 'action.hover',
+                        // グループ最終行の下に区切り線
+                        ...(isLastInGroup && {
+                          '& td': { borderBottom: '2px solid', borderBottomColor: 'divider' },
+                        }),
+                      }}
+                    >
+                      {/* 日付セル: グループの最初の行だけ表示 */}
+                      <TableCell
+                        sx={{
+                          fontSize: '0.75rem',
+                          whiteSpace: 'nowrap',
+                          verticalAlign: 'top',
+                          ...(idx > 0 && { borderBottom: 'none' }),
+                        }}
+                      >
+                        {idx === 0 ? formatDateLabel(date) : ''}
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          <Chip
+                            label={cat.label}
+                            size="small"
+                            sx={{
+                              backgroundColor: cat.color,
+                              color: '#fff',
+                              fontSize: '0.65rem',
+                              height: 18,
+                            }}
+                          />
+                          {expense.isSpecial && (
                             <Chip
-                              label={cat.label}
+                              label="★特別"
                               size="small"
-                              sx={{
-                                backgroundColor: cat.color,
-                                color: '#fff',
-                                fontSize: '0.65rem',
-                                height: 18,
-                              }}
+                              color="warning"
+                              sx={{ fontSize: '0.6rem', height: 18 }}
                             />
-                            {expense.isSpecial && (
-                              <Chip
-                                label="★"
-                                size="small"
-                                color="warning"
-                                sx={{ fontSize: '0.7rem', height: 18, minWidth: 22 }}
-                              />
-                            )}
-                            <Typography variant="body2">
-                              {formatCurrency(expense.amount)}
-                            </Typography>
-                          </Box>
-                        }
-                        secondary={expense.memo || undefined}
-                        secondaryTypographyProps={{ variant: 'caption' }}
-                        sx={{ py: 0.25 }}
-                      />
-                    </ListItem>
+                          )}
+                        </Box>
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                        {formatCurrency(expense.amount)}
+                      </TableCell>
+                      <TableCell
+                        sx={{
+                          fontSize: '0.7rem',
+                          color: expense.memo && expense.memo !== '（なし）' ? 'text.primary' : 'text.disabled',
+                          maxWidth: 120,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {expense.memo || ''}
+                      </TableCell>
+                    </TableRow>
                   );
-                })}
-              </List>
-            </Box>
-          ))}
-        </Box>
+                }).concat(
+                  // 日ごとの小計行
+                  items.length > 1 ? [(
+                    <TableRow
+                      key={`subtotal-${date}`}
+                      sx={{
+                        backgroundColor: [...grouped.keys()].indexOf(date) % 2 === 0
+                          ? 'transparent'
+                          : 'action.hover',
+                        '& td': { borderBottom: '2px solid', borderBottomColor: 'divider' },
+                      }}
+                    >
+                      <TableCell />
+                      <TableCell align="right" sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
+                        小計
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}>
+                        {formatCurrency(dayTotal)}
+                      </TableCell>
+                      <TableCell />
+                    </TableRow>
+                  )] : [],
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </Collapse>
     </>
   );

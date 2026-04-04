@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Box, IconButton, Typography, List, ListItem, ListItemText, Divider, Chip, Button } from '@mui/material';
+import { Box, IconButton, Typography, List, ListItem, ListItemText, Divider, Button } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import TodayIcon from '@mui/icons-material/Today';
 import { useExpensesByMonth } from '../../hooks/useExpenses';
 import { formatCurrency } from '../../utils/format';
 import { toDateString } from '../../utils/date';
-import { CATEGORIES } from '../../constants/categories';
+import { aggregateByCategory } from '../../utils/chart';
 import { CategoryDonutChart } from './CategoryDonutChart';
 import { ExpenseListSection } from './ExpenseListSection';
 
@@ -99,11 +99,7 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
   const weekBreakdowns = getWeekBreakdowns(year, month, expensesByDate);
 
   // カテゴリ別集計
-  const categoryTotals = new Map<string, number>();
-  for (const e of filteredExpenses) {
-    const cat = e.category ?? 'food';
-    categoryTotals.set(cat, (categoryTotals.get(cat) ?? 0) + e.amount);
-  }
+  const categoryTotals = aggregateByCategory(filteredExpenses);
 
   const goToPrevMonth = () => {
     if (month === 0) {
@@ -178,39 +174,6 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
 
       {/* カテゴリ別ドーナツチャート */}
       <CategoryDonutChart categoryTotals={categoryTotals} total={monthTotal} />
-
-      {/* カテゴリ別内訳 */}
-      {categoryTotals.size > 0 && (
-        <>
-          <Divider>
-            <Typography variant="caption">ジャンル別内訳</Typography>
-          </Divider>
-          <List dense>
-            {CATEGORIES.filter((cat) => categoryTotals.has(cat.id)).map((cat) => {
-              const total = categoryTotals.get(cat.id) ?? 0;
-              const percentage = monthTotal > 0 ? Math.round((total / monthTotal) * 100) : 0;
-              return (
-                <ListItem key={cat.id}>
-                  <Chip
-                    label={cat.label}
-                    size="small"
-                    sx={{
-                      backgroundColor: cat.color,
-                      color: '#fff',
-                      fontSize: '0.7rem',
-                      height: 20,
-                      mr: 1,
-                    }}
-                  />
-                  <ListItemText
-                    primary={`${formatCurrency(total)} (${percentage}%)`}
-                  />
-                </ListItem>
-              );
-            })}
-          </List>
-        </>
-      )}
 
       <Divider>
         <Typography variant="caption">週ごとの内訳</Typography>
