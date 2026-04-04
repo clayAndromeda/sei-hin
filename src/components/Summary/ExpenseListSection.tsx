@@ -126,7 +126,7 @@ export function ExpenseListSection({ expenses }: ExpenseListSectionProps) {
                           />
                           {expense.isSpecial && (
                             <Chip
-                              label="★特別"
+                              label="⭐️"
                               size="small"
                               color="warning"
                               sx={{ fontSize: '0.6rem', height: 18 }}
