@@ -13,6 +13,7 @@ import {
   Chip,
   FormControlLabel,
   Checkbox,
+  Autocomplete,
 } from '@mui/material';
 import { ExpenseItem } from './ExpenseItem';
 import {
@@ -23,6 +24,7 @@ import {
 } from '../../hooks/useExpenses';
 import { formatCurrency } from '../../utils/format';
 import { CATEGORIES, DEFAULT_CATEGORY } from '../../constants/categories';
+import { useMemoSuggestions } from '../../hooks/useMemoSuggestions';
 
 interface ExpenseDialogProps {
   open: boolean;
@@ -37,6 +39,10 @@ export function ExpenseDialog({ open, date, onClose }: ExpenseDialogProps) {
   const [category, setCategory] = useState<string>(DEFAULT_CATEGORY);
   const [isSpecial, setIsSpecial] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  const parsedAmountForSuggestion = parseInt(amount, 10) || 0;
+  const suggestions = useMemoSuggestions(open, parsedAmountForSuggestion);
+  const suggestionOptions = suggestions.map((s) => s.memo);
 
   // ダイアログを閉じたらフォームをリセット
   useEffect(() => {
@@ -154,12 +160,28 @@ export function ExpenseDialog({ open, date, onClose }: ExpenseDialogProps) {
             size="small"
             sx={{ flex: 1 }}
           />
-          <TextField
-            label="メモ"
-            value={memo}
-            onChange={(e) => setMemo(e.target.value)}
-            required
-            error={memo.length > 0 && memo.trim().length === 0}
+          <Autocomplete
+            freeSolo
+            options={suggestionOptions}
+            inputValue={memo}
+            onInputChange={(_e, value) => setMemo(value)}
+            onChange={(_e, value) => {
+              if (typeof value === 'string') {
+                setMemo(value);
+                // 選択されたメモに対応するカテゴリを自動設定
+                const matched = suggestions.find((s) => s.memo === value);
+                if (matched) setCategory(matched.topCategory);
+              }
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="メモ"
+                required
+                error={memo.length > 0 && memo.trim().length === 0}
+                size="small"
+              />
+            )}
             size="small"
             sx={{ flex: 2 }}
           />
