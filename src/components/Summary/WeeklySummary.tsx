@@ -76,8 +76,8 @@ export function WeeklySummary({ includeSpecial }: WeeklySummaryProps) {
       budgetText = `予算まであと${formatCurrency(remaining)}`;
     } else {
       budgetText = `予算超過: ${formatCurrency(Math.abs(remaining))}`;
-      budgetColor = 'error.main';
-      budgetBackgroundColor = 'error.light'; // 予算超過時は薄い赤背景
+      budgetColor = 'common.white';
+      budgetBackgroundColor = 'error.main'; // 予算超過時は赤背景に白文字
     }
   }
 
@@ -167,21 +167,21 @@ export function WeeklySummary({ includeSpecial }: WeeklySummaryProps) {
           transition: 'background-color 0.2s ease', // スムーズな色変更
         }}
       >
-        <Typography variant="body1" fontWeight="bold">
+        <Typography variant="body1" fontWeight="bold" color={budgetColor === 'common.white' ? 'common.white' : 'text.primary'}>
           週合計: {formatCurrency(weekTotal)}
         </Typography>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color={budgetColor === 'common.white' ? 'common.white' : 'text.secondary'}>
           1日平均: {formatCurrency(dailyAverage)}
         </Typography>
 
-        {/* 予算情報を追加 */}
+        {/* 予算情報 */}
         {weekBudget !== null && (
           <Typography
             variant="body2"
             sx={{
               color: budgetColor,
               mt: 0.5,
-              fontWeight: budgetColor === 'error.main' ? 'bold' : 'normal', // 超過時は太字
+              fontWeight: budgetColor === 'common.white' ? 'bold' : 'normal',
             }}
           >
             {budgetText}
@@ -192,7 +192,7 @@ export function WeeklySummary({ includeSpecial }: WeeklySummaryProps) {
           <Typography
             variant="body2"
             sx={{
-              color: weekDiff > 0 ? 'error.main' : weekDiff < 0 ? 'success.main' : 'text.secondary',
+              color: budgetColor === 'common.white' ? 'common.white' : (weekDiff > 0 ? 'error.main' : weekDiff < 0 ? 'success.main' : 'text.secondary'),
               mt: 0.5,
             }}
           >
