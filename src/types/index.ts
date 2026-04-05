@@ -4,7 +4,7 @@ export interface Expense {
   date: string; // "YYYY-MM-DD" 形式
   amount: number; // 金額（円、整数）
   memo: string; // メモ（任意、空文字可）
-  category: string; // カテゴリID（'food' | 'transport' | 'entertainment' | 'books' | 'other'）
+  category: string; // カテゴリID（'food' | 'transport' | 'entertainment' | 'books' | 'living' | 'other'）
   createdAt: string; // ISO 8601 datetime
   updatedAt: string; // ISO 8601 datetime
   deleted?: boolean; // 削除フラグ（同期用）

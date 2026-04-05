@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest';
 import { CATEGORIES, DEFAULT_CATEGORY, getCategoryById } from './categories';
 
 describe('CATEGORIES', () => {
-  it('5つのカテゴリが定義されている', () => {
-    expect(CATEGORIES).toHaveLength(5);
+  it('6つのカテゴリが定義されている', () => {
+    expect(CATEGORIES).toHaveLength(6);
   });
 
   it('各カテゴリがid, label, colorを持つ', () => {
@@ -43,6 +43,11 @@ describe('getCategoryById', () => {
   it('書籍代カテゴリを取得する', () => {
     const cat = getCategoryById('books');
     expect(cat).toEqual({ id: 'books', label: '書籍代', color: '#9C27B0' });
+  });
+
+  it('生活費カテゴリを取得する', () => {
+    const cat = getCategoryById('living');
+    expect(cat).toEqual({ id: 'living', label: '生活費', color: '#795548' });
   });
 
   it('その他カテゴリを取得する', () => {

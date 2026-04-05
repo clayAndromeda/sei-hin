@@ -118,7 +118,7 @@ export function ExpenseDialog({ open, date, onClose }: ExpenseDialogProps) {
       <DialogTitle>{displayDate}の記録</DialogTitle>
       <DialogContent>
         {/* カテゴリ選択（チップで1タップ選択） */}
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 1, mb: 1 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0.5, mt: 1, mb: 1 }}>
           {CATEGORIES.map((cat) => (
             <Chip
               key={cat.id}
@@ -131,6 +131,7 @@ export function ExpenseDialog({ open, date, onClose }: ExpenseDialogProps) {
                 border: `1.5px solid ${cat.color}`,
                 fontWeight: category === cat.id ? 'bold' : 'normal',
                 cursor: 'pointer',
+                width: '100%',
               }}
             />
           ))}

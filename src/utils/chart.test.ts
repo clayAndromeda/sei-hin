@@ -96,7 +96,7 @@ describe('categoryMapToChartData', () => {
       ['books', 200],
     ]);
     const result = categoryMapToChartData(totals);
-    // CATEGORIES順: food, transport, entertainment, books, other
+    // CATEGORIES順: food, transport, entertainment, books, living, other
     expect(result.map((r) => r.id)).toEqual(['food', 'books', 'other']);
   });
 });

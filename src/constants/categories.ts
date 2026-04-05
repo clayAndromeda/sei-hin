@@ -4,6 +4,7 @@ export const CATEGORIES = [
   { id: 'transport', label: '交通費', color: '#2196F3' },
   { id: 'entertainment', label: '娯楽費', color: '#FF9800' },
   { id: 'books', label: '書籍代', color: '#9C27B0' },
+  { id: 'living', label: '生活費', color: '#795548' },
   { id: 'other', label: 'その他', color: '#607D8B' },
 ] as const;
 
@@ -13,5 +14,5 @@ export const DEFAULT_CATEGORY: CategoryId = 'food';
 
 // IDからカテゴリ情報を取得
 export function getCategoryById(id: string) {
-  return CATEGORIES.find((c) => c.id === id) ?? CATEGORIES[4]; // 見つからなければ「その他」
+  return CATEGORIES.find((c) => c.id === id) ?? CATEGORIES[CATEGORIES.length - 1]; // 見つからなければ「その他」
 }
