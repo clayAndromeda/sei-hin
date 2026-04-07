@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { Box, Tabs, Tab, FormControlLabel, Switch } from '@mui/material';
 import { WeeklySummary } from './WeeklySummary';
 import { MonthlySummary } from './MonthlySummary';
+import { usePersistedState } from '../../hooks/usePersistedState';
 
 export function SummaryView() {
   const [tab, setTab] = useState(0);
-  const [excludeSpecial, setExcludeSpecial] = useState(false);
+  const [excludeSpecial, setExcludeSpecial] = usePersistedState('excludeSpecial', false);
 
   // includeSpecialは除外フラグの逆
   const includeSpecial = !excludeSpecial;

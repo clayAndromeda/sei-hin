@@ -10,6 +10,7 @@ import { CalendarGrid } from './CalendarGrid';
 import { ExpenseDialog } from '../ExpenseDialog/ExpenseDialog';
 import { WeekBudgetDialog } from './WeekBudgetDialog';
 import { useExpensesByDateRange } from '../../hooks/useExpenses';
+import { usePersistedState } from '../../hooks/usePersistedState';
 import { getMonthDays, toDateString } from '../../utils/date';
 import { formatCurrency } from '../../utils/format';
 import { aggregateByCategory } from '../../utils/chart';
@@ -27,7 +28,7 @@ export function CalendarView({ onDataChanged }: CalendarViewProps) {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<CalendarViewMode>('weekly');
-  const [excludeSpecial, setExcludeSpecial] = useState(false);
+  const [excludeSpecial, setExcludeSpecial] = usePersistedState('excludeSpecial', false);
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
