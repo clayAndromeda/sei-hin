@@ -1,10 +1,18 @@
 import Dexie, { type Table } from 'dexie';
-import type { Expense, Metadata, WeekBudget } from '../types';
+import type {
+  Expense,
+  FixedCostAmountChange,
+  FixedCostItem,
+  Metadata,
+  WeekBudget,
+} from '../types';
 
 export class SeihinDB extends Dexie {
   expenses!: Table<Expense, string>;
   metadata!: Table<Metadata, string>;
   weekBudgets!: Table<WeekBudget, string>;
+  fixedCostItems!: Table<FixedCostItem, string>;
+  fixedCostAmountChanges!: Table<FixedCostAmountChange, string>;
 
   constructor() {
     super('seihin');
@@ -92,6 +100,48 @@ export class SeihinDB extends Dexie {
             }
           });
       });
+
+    // v7: 月固定費テーブル追加
+    this.version(7).stores({
+      expenses: 'id, date, category, createdAt, updatedAt',
+      metadata: 'key',
+      weekBudgets: 'weekStart',
+      fixedCostItems: 'id, order, updatedAt',
+      fixedCostAmountChanges:
+        'id, itemId, effectiveYearMonth, updatedAt, [itemId+effectiveYearMonth]',
+    });
+
+    // v8: FixedCostItem に startYearMonth フィールドを追加
+    this.version(8)
+      .stores({
+        expenses: 'id, date, category, createdAt, updatedAt',
+        metadata: 'key',
+        weekBudgets: 'weekStart',
+        fixedCostItems: 'id, order, startYearMonth, updatedAt',
+        fixedCostAmountChanges:
+          'id, itemId, effectiveYearMonth, updatedAt, [itemId+effectiveYearMonth]',
+      })
+      .upgrade((tx) => {
+        // 既存レコードには過去月から有効な値を設定（実質的に全月に出現）
+        return tx
+          .table('fixedCostItems')
+          .toCollection()
+          .modify((item) => {
+            if (!item.startYearMonth) {
+              item.startYearMonth = '1970-01';
+            }
+          });
+      });
+
+    // v9: FixedCostItem に endYearMonth フィールドを追加（終了月の管理）
+    this.version(9).stores({
+      expenses: 'id, date, category, createdAt, updatedAt',
+      metadata: 'key',
+      weekBudgets: 'weekStart',
+      fixedCostItems: 'id, order, startYearMonth, endYearMonth, updatedAt',
+      fixedCostAmountChanges:
+        'id, itemId, effectiveYearMonth, updatedAt, [itemId+effectiveYearMonth]',
+    });
   }
 }
 
