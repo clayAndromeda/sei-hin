@@ -3,12 +3,22 @@ import { Box, IconButton, Typography, List, ListItem, ListItemText, Divider, But
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import TodayIcon from '@mui/icons-material/Today';
+import EditIcon from '@mui/icons-material/Edit';
+import AddIcon from '@mui/icons-material/Add';
 import { useExpensesByMonth } from '../../hooks/useExpenses';
+import { useMonthlyFixedCosts } from '../../hooks/useFixedCosts';
 import { formatCurrency } from '../../utils/format';
 import { toDateString } from '../../utils/date';
+import {
+  formatYearMonth,
+  formatYearMonthLabel,
+  isPastYearMonth,
+} from '../../utils/fixedCost';
 import { aggregateByCategory } from '../../utils/chart';
 import { CategoryDonutChart } from './CategoryDonutChart';
 import { ExpenseListSection } from './ExpenseListSection';
+import { FixedCostItemDialog } from './FixedCostItemDialog';
+import type { FixedCostItem } from '../../types';
 
 interface WeekBreakdown {
   label: string;
@@ -60,8 +70,16 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
+  const [fixedCostDialogMode, setFixedCostDialogMode] =
+    useState<'add' | 'edit' | null>(null);
+  const [fixedCostDialogItem, setFixedCostDialogItem] =
+    useState<FixedCostItem | null>(null);
 
   const expenses = useExpensesByMonth(year, month);
+  const yearMonth = formatYearMonth(year, month);
+  const isPast = isPastYearMonth(yearMonth, today);
+  const { resolved: fixedCosts, total: fixedCostTotal } =
+    useMonthlyFixedCosts(yearMonth);
 
   // 前月のデータを取得
   const prevMonth = month === 0 ? 11 : month - 1;
@@ -165,10 +183,20 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
               mt: 0.5,
             }}
           >
-            前月比: {monthDiff > 0 ? '+' : ''}
+            前月比（月合計）: {monthDiff > 0 ? '+' : ''}
             {formatCurrency(monthDiff)} ({monthDiff > 0 ? '+' : ''}
             {monthDiffPercent}%)
           </Typography>
+        )}
+        {fixedCosts.length > 0 && (
+          <>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+              固定費: {formatCurrency(fixedCostTotal)}
+            </Typography>
+            <Typography variant="body2" fontWeight="bold" sx={{ mt: 0.5 }}>
+              月合計 + 固定費: {formatCurrency(monthTotal + fixedCostTotal)}
+            </Typography>
+          </>
         )}
       </Box>
 
@@ -189,8 +217,87 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
         ))}
       </List>
 
+      {/* 月固定費の内訳 */}
+      {(fixedCosts.length > 0 || !isPast) && (
+        <>
+          <Divider>
+            <Typography variant="caption">固定費の内訳</Typography>
+          </Divider>
+          {fixedCosts.length > 0 ? (
+            <List dense>
+              {fixedCosts.map(({ item, amount, changedFrom }) => (
+                <ListItem
+                  key={item.id}
+                  secondaryAction={
+                    !isPast && (
+                      <IconButton
+                        edge="end"
+                        size="small"
+                        onClick={() => {
+                          setFixedCostDialogItem(item);
+                          setFixedCostDialogMode('edit');
+                        }}
+                        aria-label={`${item.name}を編集`}
+                      >
+                        <EditIcon fontSize="small" />
+                      </IconButton>
+                    )
+                  }
+                >
+                  <ListItemText
+                    primary={item.name}
+                    secondary={
+                      changedFrom
+                        ? `${formatYearMonthLabel(changedFrom)}以降の金額`
+                        : '初期金額'
+                    }
+                  />
+                  <Typography variant="body2" sx={{ mr: isPast ? 0 : 5 }}>
+                    {formatCurrency(amount)}
+                  </Typography>
+                </ListItem>
+              ))}
+            </List>
+          ) : (
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ textAlign: 'center', py: 2 }}
+            >
+              固定費は登録されていません
+            </Typography>
+          )}
+          {!isPast && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<AddIcon />}
+                onClick={() => {
+                  setFixedCostDialogItem(null);
+                  setFixedCostDialogMode('add');
+                }}
+              >
+                項目を追加
+              </Button>
+            </Box>
+          )}
+        </>
+      )}
+
       {/* 支出一覧（メモ確認用） */}
       <ExpenseListSection expenses={filteredExpenses} />
+
+      <FixedCostItemDialog
+        open={fixedCostDialogMode !== null}
+        mode={fixedCostDialogMode ?? 'add'}
+        item={fixedCostDialogItem}
+        yearMonth={yearMonth}
+        onClose={() => {
+          setFixedCostDialogMode(null);
+          setFixedCostDialogItem(null);
+        }}
+      />
     </Box>
   );
 }

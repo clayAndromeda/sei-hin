@@ -1,6 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import { mergeExpenses, mergeWeekBudgets, mergeDefaultWeekBudget } from './sync';
-import type { Expense, WeekBudget, DefaultWeekBudgetSync } from '../types';
+import {
+  mergeExpenses,
+  mergeWeekBudgets,
+  mergeDefaultWeekBudget,
+  mergeFixedCostItems,
+  mergeFixedCostAmountChanges,
+} from './sync';
+import type {
+  Expense,
+  WeekBudget,
+  DefaultWeekBudgetSync,
+  FixedCostItem,
+  FixedCostAmountChange,
+} from '../types';
 
 // テスト用のExpenseヘルパー
 function createExpense(overrides: Partial<Expense> = {}): Expense {
@@ -278,5 +290,182 @@ describe('mergeDefaultWeekBudget', () => {
     const remote: DefaultWeekBudgetSync = { budget: 8000, updatedAt: '2026-02-16T10:00:00Z' };
     const result = mergeDefaultWeekBudget(local, remote);
     expect(result?.budget).toBe(5000);
+  });
+});
+
+function createFixedCostItem(
+  overrides: Partial<FixedCostItem> = {},
+): FixedCostItem {
+  return {
+    id: 'item-1',
+    name: '家賃',
+    initialAmount: 80000,
+    startYearMonth: '2026-04',
+    order: 0,
+    updatedAt: '2026-04-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+describe('mergeFixedCostItems', () => {
+  it('ローカルのみの場合、ローカルをそのまま返す', () => {
+    const local = [createFixedCostItem({ id: '1' })];
+    const result = mergeFixedCostItems(local, []);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('1');
+  });
+
+  it('リモートのみの場合、リモートをそのまま返す', () => {
+    const remote = [createFixedCostItem({ id: '1' })];
+    const result = mergeFixedCostItems([], remote);
+    expect(result).toHaveLength(1);
+  });
+
+  it('両方空の場合、空配列を返す', () => {
+    expect(mergeFixedCostItems([], [])).toHaveLength(0);
+  });
+
+  it('同一IDでリモートが新しい場合、リモートを採用する', () => {
+    const local = [
+      createFixedCostItem({
+        id: '1',
+        initialAmount: 80000,
+        updatedAt: '2026-04-01T10:00:00Z',
+      }),
+    ];
+    const remote = [
+      createFixedCostItem({
+        id: '1',
+        initialAmount: 85000,
+        updatedAt: '2026-04-01T11:00:00Z',
+      }),
+    ];
+    const result = mergeFixedCostItems(local, remote);
+    expect(result).toHaveLength(1);
+    expect(result[0].initialAmount).toBe(85000);
+  });
+
+  it('同一IDでupdatedAtが同じ場合、ローカルを採用する', () => {
+    const local = [
+      createFixedCostItem({
+        id: '1',
+        initialAmount: 80000,
+        updatedAt: '2026-04-01T10:00:00Z',
+      }),
+    ];
+    const remote = [
+      createFixedCostItem({
+        id: '1',
+        initialAmount: 85000,
+        updatedAt: '2026-04-01T10:00:00Z',
+      }),
+    ];
+    const result = mergeFixedCostItems(local, remote);
+    expect(result[0].initialAmount).toBe(80000);
+  });
+
+  it('異なるIDの場合、両方含む', () => {
+    const local = [createFixedCostItem({ id: '1' })];
+    const remote = [createFixedCostItem({ id: '2' })];
+    const result = mergeFixedCostItems(local, remote);
+    expect(result).toHaveLength(2);
+  });
+
+  it('リモートで削除された場合、新しければ削除を採用する', () => {
+    const local = [
+      createFixedCostItem({
+        id: '1',
+        deleted: false,
+        updatedAt: '2026-04-01T10:00:00Z',
+      }),
+    ];
+    const remote = [
+      createFixedCostItem({
+        id: '1',
+        deleted: true,
+        updatedAt: '2026-04-01T11:00:00Z',
+      }),
+    ];
+    const result = mergeFixedCostItems(local, remote);
+    expect(result[0].deleted).toBe(true);
+  });
+});
+
+function createAmountChange(
+  overrides: Partial<FixedCostAmountChange> = {},
+): FixedCostAmountChange {
+  return {
+    id: 'change-1',
+    itemId: 'item-1',
+    effectiveYearMonth: '2026-05',
+    amount: 10000,
+    updatedAt: '2026-04-15T00:00:00Z',
+    ...overrides,
+  };
+}
+
+describe('mergeFixedCostAmountChanges', () => {
+  it('ローカルのみの場合、ローカルをそのまま返す', () => {
+    const local = [createAmountChange({ id: '1' })];
+    const result = mergeFixedCostAmountChanges(local, []);
+    expect(result).toHaveLength(1);
+  });
+
+  it('リモートのみの場合、リモートをそのまま返す', () => {
+    const remote = [createAmountChange({ id: '1' })];
+    const result = mergeFixedCostAmountChanges([], remote);
+    expect(result).toHaveLength(1);
+  });
+
+  it('同一IDでリモートが新しい場合、リモートを採用する', () => {
+    const local = [
+      createAmountChange({
+        id: '1',
+        amount: 10000,
+        updatedAt: '2026-04-15T10:00:00Z',
+      }),
+    ];
+    const remote = [
+      createAmountChange({
+        id: '1',
+        amount: 11000,
+        updatedAt: '2026-04-15T11:00:00Z',
+      }),
+    ];
+    const result = mergeFixedCostAmountChanges(local, remote);
+    expect(result[0].amount).toBe(11000);
+  });
+
+  it('異なるIDは両方含まれる', () => {
+    const local = [createAmountChange({ id: '1' })];
+    const remote = [createAmountChange({ id: '2', effectiveYearMonth: '2026-09' })];
+    const result = mergeFixedCostAmountChanges(local, remote);
+    expect(result).toHaveLength(2);
+  });
+
+  it('同じ発効月でも id が違えば両方残る（解決ロジック側で処理）', () => {
+    const local = [createAmountChange({ id: '1', effectiveYearMonth: '2026-05' })];
+    const remote = [createAmountChange({ id: '2', effectiveYearMonth: '2026-05' })];
+    const result = mergeFixedCostAmountChanges(local, remote);
+    expect(result).toHaveLength(2);
+  });
+
+  it('リモートで削除された場合、新しければ削除を採用する', () => {
+    const local = [
+      createAmountChange({
+        id: '1',
+        deleted: false,
+        updatedAt: '2026-04-15T10:00:00Z',
+      }),
+    ];
+    const remote = [
+      createAmountChange({
+        id: '1',
+        deleted: true,
+        updatedAt: '2026-04-15T11:00:00Z',
+      }),
+    ];
+    const result = mergeFixedCostAmountChanges(local, remote);
+    expect(result[0].deleted).toBe(true);
   });
 });

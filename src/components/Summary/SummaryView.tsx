@@ -25,8 +25,8 @@ export function SummaryView() {
         centered
         sx={{ mb: { xs: 2, sm: 3 } }}
       >
-        <Tab label="週次" />
         <Tab label="月次" />
+        <Tab label="週次" />
       </Tabs>
 
       {/* 特別な支出フィルタ */}
@@ -43,8 +43,8 @@ export function SummaryView() {
         />
       </Box>
 
-      {tab === 0 && <WeeklySummary includeSpecial={includeSpecial} />}
-      {tab === 1 && <MonthlySummary includeSpecial={includeSpecial} />}
+      {tab === 0 && <MonthlySummary includeSpecial={includeSpecial} />}
+      {tab === 1 && <WeeklySummary includeSpecial={includeSpecial} />}
     </Box>
   );
 }

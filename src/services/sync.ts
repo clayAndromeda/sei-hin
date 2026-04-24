@@ -1,6 +1,13 @@
 import { db } from './db';
 import { downloadFile, uploadFile } from './dropbox';
-import type { Expense, SeihinData, WeekBudget, DefaultWeekBudgetSync } from '../types';
+import type {
+  Expense,
+  SeihinData,
+  WeekBudget,
+  DefaultWeekBudgetSync,
+  FixedCostItem,
+  FixedCostAmountChange,
+} from '../types';
 
 // マージロジック: 両方のリストをID基準でマージ
 export function mergeExpenses(
@@ -89,6 +96,48 @@ function extractRemoteWeekBudgets(data: SeihinData): WeekBudget[] {
   }));
 }
 
+// 固定費項目のマージ: idをキーにupdatedAtで新しい方を採用
+export function mergeFixedCostItems(
+  local: FixedCostItem[],
+  remote: FixedCostItem[],
+): FixedCostItem[] {
+  const merged = new Map<string, FixedCostItem>();
+
+  for (const item of local) {
+    merged.set(item.id, item);
+  }
+
+  for (const item of remote) {
+    const existing = merged.get(item.id);
+    if (!existing || item.updatedAt > existing.updatedAt) {
+      merged.set(item.id, item);
+    }
+  }
+
+  return Array.from(merged.values());
+}
+
+// 固定費変更履歴のマージ: idをキーにupdatedAtで新しい方を採用
+export function mergeFixedCostAmountChanges(
+  local: FixedCostAmountChange[],
+  remote: FixedCostAmountChange[],
+): FixedCostAmountChange[] {
+  const merged = new Map<string, FixedCostAmountChange>();
+
+  for (const c of local) {
+    merged.set(c.id, c);
+  }
+
+  for (const c of remote) {
+    const existing = merged.get(c.id);
+    if (!existing || c.updatedAt > existing.updatedAt) {
+      merged.set(c.id, c);
+    }
+  }
+
+  return Array.from(merged.values());
+}
+
 // 同期の排他制御用フラグ
 let isSyncing = false;
 
@@ -104,6 +153,8 @@ export async function performSync(): Promise<void> {
     const localExpenses = await db.expenses.toArray();
     const localWeekBudgets = await db.weekBudgets.toArray();
     const localDefaultWB = await getLocalDefaultWeekBudget();
+    const localFixedCostItems = await db.fixedCostItems.toArray();
+    const localFixedCostChanges = await db.fixedCostAmountChanges.toArray();
 
     // 2. Dropboxからダウンロード
     const downloaded = await downloadFile();
@@ -111,6 +162,8 @@ export async function performSync(): Promise<void> {
     let mergedExpenses: Expense[];
     let mergedWeekBudgets: WeekBudget[];
     let mergedDefaultWB: DefaultWeekBudgetSync | null;
+    let mergedFixedCostItems: FixedCostItem[];
+    let mergedFixedCostChanges: FixedCostAmountChange[];
     let rev: string | undefined;
 
     if (downloaded) {
@@ -122,37 +175,62 @@ export async function performSync(): Promise<void> {
       }));
       const remoteWeekBudgets = extractRemoteWeekBudgets(downloaded.data);
       const remoteDefaultWB = downloaded.data.defaultWeekBudget ?? null;
+      const remoteFixedCostItems = downloaded.data.fixedCostItems ?? [];
+      const remoteFixedCostChanges = downloaded.data.fixedCostAmountChanges ?? [];
 
       // 3. マージ
       mergedExpenses = mergeExpenses(localExpenses, remoteExpenses);
       mergedWeekBudgets = mergeWeekBudgets(localWeekBudgets, remoteWeekBudgets);
       mergedDefaultWB = mergeDefaultWeekBudget(localDefaultWB, remoteDefaultWB);
+      mergedFixedCostItems = mergeFixedCostItems(
+        localFixedCostItems,
+        remoteFixedCostItems,
+      );
+      mergedFixedCostChanges = mergeFixedCostAmountChanges(
+        localFixedCostChanges,
+        remoteFixedCostChanges,
+      );
       rev = downloaded.rev;
     } else {
       // Dropboxにファイルがない場合はローカルのみ
       mergedExpenses = localExpenses;
       mergedWeekBudgets = localWeekBudgets;
       mergedDefaultWB = localDefaultWB;
+      mergedFixedCostItems = localFixedCostItems;
+      mergedFixedCostChanges = localFixedCostChanges;
     }
 
     // 4. ローカルに保存（一括置換）
-    await db.transaction('rw', db.expenses, db.weekBudgets, async () => {
-      await db.expenses.clear();
-      await db.expenses.bulkAdd(mergedExpenses);
-      await db.weekBudgets.clear();
-      await db.weekBudgets.bulkAdd(mergedWeekBudgets);
-    });
+    await db.transaction(
+      'rw',
+      db.expenses,
+      db.weekBudgets,
+      db.fixedCostItems,
+      db.fixedCostAmountChanges,
+      async () => {
+        await db.expenses.clear();
+        await db.expenses.bulkAdd(mergedExpenses);
+        await db.weekBudgets.clear();
+        await db.weekBudgets.bulkAdd(mergedWeekBudgets);
+        await db.fixedCostItems.clear();
+        await db.fixedCostItems.bulkAdd(mergedFixedCostItems);
+        await db.fixedCostAmountChanges.clear();
+        await db.fixedCostAmountChanges.bulkAdd(mergedFixedCostChanges);
+      },
+    );
     if (mergedDefaultWB) {
       await saveLocalDefaultWeekBudget(mergedDefaultWB);
     }
 
     // 5. Dropboxにアップロード
     const dataToUpload: SeihinData = {
-      version: 3,
+      version: 4,
       updatedAt: new Date().toISOString(),
       expenses: mergedExpenses,
       weekBudgets: mergedWeekBudgets,
       defaultWeekBudget: mergedDefaultWB ?? undefined,
+      fixedCostItems: mergedFixedCostItems,
+      fixedCostAmountChanges: mergedFixedCostChanges,
     };
 
     try {
@@ -169,27 +247,50 @@ export async function performSync(): Promise<void> {
           }));
           const retryRemoteWB = extractRemoteWeekBudgets(retryDownload.data);
           const retryRemoteDefaultWB = retryDownload.data.defaultWeekBudget ?? null;
+          const retryRemoteFCI = retryDownload.data.fixedCostItems ?? [];
+          const retryRemoteFCC = retryDownload.data.fixedCostAmountChanges ?? [];
 
           const retryMergedExpenses = mergeExpenses(mergedExpenses, retryRemote);
           const retryMergedWB = mergeWeekBudgets(mergedWeekBudgets, retryRemoteWB);
           const retryMergedDefaultWB = mergeDefaultWeekBudget(mergedDefaultWB, retryRemoteDefaultWB);
+          const retryMergedFCI = mergeFixedCostItems(
+            mergedFixedCostItems,
+            retryRemoteFCI,
+          );
+          const retryMergedFCC = mergeFixedCostAmountChanges(
+            mergedFixedCostChanges,
+            retryRemoteFCC,
+          );
 
-          await db.transaction('rw', db.expenses, db.weekBudgets, async () => {
-            await db.expenses.clear();
-            await db.expenses.bulkAdd(retryMergedExpenses);
-            await db.weekBudgets.clear();
-            await db.weekBudgets.bulkAdd(retryMergedWB);
-          });
+          await db.transaction(
+            'rw',
+            db.expenses,
+            db.weekBudgets,
+            db.fixedCostItems,
+            db.fixedCostAmountChanges,
+            async () => {
+              await db.expenses.clear();
+              await db.expenses.bulkAdd(retryMergedExpenses);
+              await db.weekBudgets.clear();
+              await db.weekBudgets.bulkAdd(retryMergedWB);
+              await db.fixedCostItems.clear();
+              await db.fixedCostItems.bulkAdd(retryMergedFCI);
+              await db.fixedCostAmountChanges.clear();
+              await db.fixedCostAmountChanges.bulkAdd(retryMergedFCC);
+            },
+          );
           if (retryMergedDefaultWB) {
             await saveLocalDefaultWeekBudget(retryMergedDefaultWB);
           }
 
           const retryData: SeihinData = {
-            version: 3,
+            version: 4,
             updatedAt: new Date().toISOString(),
             expenses: retryMergedExpenses,
             weekBudgets: retryMergedWB,
             defaultWeekBudget: retryMergedDefaultWB ?? undefined,
+            fixedCostItems: retryMergedFCI,
+            fixedCostAmountChanges: retryMergedFCC,
           };
           await uploadFile(retryData, retryDownload.rev);
         }
@@ -209,6 +310,20 @@ export async function performSync(): Promise<void> {
       .map((wb) => wb.weekStart);
     if (deletedWBKeys.length > 0) {
       await db.weekBudgets.bulkDelete(deletedWBKeys);
+    }
+
+    const deletedFCIIds = mergedFixedCostItems
+      .filter((i) => i.deleted)
+      .map((i) => i.id);
+    if (deletedFCIIds.length > 0) {
+      await db.fixedCostItems.bulkDelete(deletedFCIIds);
+    }
+
+    const deletedFCCIds = mergedFixedCostChanges
+      .filter((c) => c.deleted)
+      .map((c) => c.id);
+    if (deletedFCCIds.length > 0) {
+      await db.fixedCostAmountChanges.bulkDelete(deletedFCCIds);
     }
 
     // 7. 最終同期日時を保存
