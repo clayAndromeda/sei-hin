@@ -21,6 +21,7 @@ import { CATEGORIES, getCategoryById, type CategoryId } from '../../constants/ca
 
 interface ExpenseListSectionProps {
   expenses: Expense[];
+  onEditExpense?: (expense: Expense) => void;
 }
 
 type CategoryFilter = 'all' | CategoryId;
@@ -43,7 +44,7 @@ function formatDateLabel(dateStr: string): string {
   return `${d.getMonth() + 1}/${d.getDate()}（${weekdays[d.getDay()]}）`;
 }
 
-export function ExpenseListSection({ expenses }: ExpenseListSectionProps) {
+export function ExpenseListSection({ expenses, onEditExpense }: ExpenseListSectionProps) {
   const [open, setOpen] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
 
@@ -147,6 +148,7 @@ export function ExpenseListSection({ expenses }: ExpenseListSectionProps) {
                     return (
                       <TableRow
                         key={expense.id}
+                        onClick={onEditExpense ? () => onEditExpense(expense) : undefined}
                         sx={{
                           // ストライプ背景（日付グループ単位で交互）
                           backgroundColor: [...grouped.keys()].indexOf(date) % 2 === 0
@@ -155,6 +157,13 @@ export function ExpenseListSection({ expenses }: ExpenseListSectionProps) {
                           // グループ最終行の下に区切り線
                           ...(isLastInGroup && {
                             '& td': { borderBottom: '2px solid', borderBottomColor: 'divider' },
+                          }),
+                          // 編集可能ならクリック可能な見た目に
+                          ...(onEditExpense && {
+                            cursor: 'pointer',
+                            '&:hover': {
+                              backgroundColor: 'action.selected',
+                            },
                           }),
                         }}
                       >

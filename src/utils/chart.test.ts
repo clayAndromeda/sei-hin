@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { aggregateByCategory, categoryMapToChartData } from './chart';
+import {
+  aggregateByCategory,
+  buildCategoryComparison,
+  categoryMapToChartData,
+} from './chart';
 import type { Expense } from '../types';
 
 // テスト用のExpenseヘルパー
@@ -98,5 +102,75 @@ describe('categoryMapToChartData', () => {
     const result = categoryMapToChartData(totals);
     // CATEGORIES順: food, transport, entertainment, books, living, other
     expect(result.map((r) => r.id)).toEqual(['food', 'books', 'other']);
+  });
+});
+
+describe('buildCategoryComparison', () => {
+  it('両月とも0のカテゴリは結果に含まれない', () => {
+    const current = new Map([['food', 500]]);
+    const previous = new Map([['food', 300]]);
+    const result = buildCategoryComparison(current, previous);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('food');
+  });
+
+  it('差分・差分%を正しく計算する', () => {
+    const current = new Map([['food', 1500]]);
+    const previous = new Map([['food', 1000]]);
+    const [row] = buildCategoryComparison(current, previous);
+    expect(row.current).toBe(1500);
+    expect(row.previous).toBe(1000);
+    expect(row.diff).toBe(500);
+    expect(row.diffPercent).toBe(50);
+  });
+
+  it('前月0の場合、差分%はnull', () => {
+    const current = new Map([['food', 500]]);
+    const previous = new Map<string, number>();
+    const [row] = buildCategoryComparison(current, previous);
+    expect(row.diffPercent).toBeNull();
+    expect(row.diff).toBe(500);
+  });
+
+  it('今月のみ0の場合、前月との差は負になる', () => {
+    const current = new Map<string, number>();
+    const previous = new Map([['transport', 2000]]);
+    const [row] = buildCategoryComparison(current, previous);
+    expect(row.current).toBe(0);
+    expect(row.previous).toBe(2000);
+    expect(row.diff).toBe(-2000);
+    expect(row.diffPercent).toBe(-100);
+  });
+
+  it('差分の絶対値が大きい順にソートされる', () => {
+    const current = new Map([
+      ['food', 1000],
+      ['transport', 500],
+      ['books', 100],
+    ]);
+    const previous = new Map([
+      ['food', 900], // diff +100
+      ['transport', 1000], // diff -500
+      ['books', 50], // diff +50
+    ]);
+    const result = buildCategoryComparison(current, previous);
+    expect(result.map((r) => r.id)).toEqual(['transport', 'food', 'books']);
+  });
+
+  it('両Mapが空なら空配列を返す', () => {
+    expect(buildCategoryComparison(new Map(), new Map())).toEqual([]);
+  });
+
+  it('CATEGORIESに存在しないカテゴリIDは結果から除外される', () => {
+    // 過去に存在したが削除されたカテゴリIDが混入しても、結果には含めない
+    const current = new Map([
+      ['food', 500],
+      ['obsolete_category', 9999],
+    ]);
+    const previous = new Map([
+      ['obsolete_category', 8888],
+    ]);
+    const result = buildCategoryComparison(current, previous);
+    expect(result.map((r) => r.id)).toEqual(['food']);
   });
 });

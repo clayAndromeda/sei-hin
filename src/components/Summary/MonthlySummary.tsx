@@ -10,6 +10,7 @@ import {
   Divider,
   Button,
   Collapse,
+  Chip,
 } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -26,11 +27,12 @@ import {
   formatYearMonthLabel,
   isPastYearMonth,
 } from '../../utils/fixedCost';
-import { aggregateByCategory } from '../../utils/chart';
+import { aggregateByCategory, buildCategoryComparison } from '../../utils/chart';
 import { CategoryDonutChart } from './CategoryDonutChart';
 import { ExpenseListSection } from './ExpenseListSection';
 import { FixedCostItemDialog } from './FixedCostItemDialog';
-import type { FixedCostItem } from '../../types';
+import { ExpenseDialog } from '../ExpenseDialog/ExpenseDialog';
+import type { Expense, FixedCostItem } from '../../types';
 
 interface MonthlySummaryProps {
   includeSpecial: boolean;
@@ -45,6 +47,8 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
   const [fixedCostDialogItem, setFixedCostDialogItem] =
     useState<FixedCostItem | null>(null);
   const [fixedCostOpen, setFixedCostOpen] = useState(false);
+  const [comparisonOpen, setComparisonOpen] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
   const expenses = useExpensesByMonth(year, month);
   const yearMonth = formatYearMonth(year, month);
@@ -68,6 +72,11 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
 
   const monthTotal = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
 
+  // 特別な支出の合計（トグルに関わらず当月の全特別支出を集計）
+  const specialTotal = expenses
+    .filter((e) => e.isSpecial)
+    .reduce((sum, e) => sum + e.amount, 0);
+
   // 前月の合計
   const prevMonthTotal = filteredPrevMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
   const monthDiff = monthTotal - prevMonthTotal;
@@ -81,6 +90,25 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
 
   // カテゴリ別集計
   const categoryTotals = aggregateByCategory(filteredExpenses);
+  const prevCategoryTotals = aggregateByCategory(filteredPrevMonthExpenses);
+  const categoryComparison = buildCategoryComparison(categoryTotals, prevCategoryTotals);
+
+  // 1日平均の前月比: 期間を揃えて比較する（MTD同士）
+  // 当月進行中の場合、前月も同じ日数分のみを対象にする（例: 今日が4/5なら3/1〜3/5のみ）。
+  // 過去月閲覧時は両月ともフル期間で比較する。
+  const prevMonthLastDay = new Date(prevYear, prevMonth + 1, 0).getDate();
+  const prevDaysForAverage = isCurrentMonth
+    ? Math.min(today.getDate(), prevMonthLastDay)
+    : prevMonthLastDay;
+  const prevMonthTotalForAverage = isCurrentMonth
+    ? filteredPrevMonthExpenses
+        .filter((e) => parseInt(e.date.slice(8, 10), 10) <= prevDaysForAverage)
+        .reduce((sum, e) => sum + e.amount, 0)
+    : prevMonthTotal;
+  const prevDailyAverage = prevDaysForAverage > 0
+    ? Math.floor(prevMonthTotalForAverage / prevDaysForAverage)
+    : 0;
+  const dailyAverageDiff = dailyAverage - prevDailyAverage;
 
   const goToPrevMonth = () => {
     if (month === 0) {
@@ -139,16 +167,35 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
           1日平均: {formatCurrency(dailyAverage)}
         </Typography>
         {prevMonthTotal > 0 && (
+          <>
+            <Typography
+              variant="body2"
+              sx={{
+                color: monthDiff > 0 ? 'error.main' : monthDiff < 0 ? 'success.main' : 'text.secondary',
+                mt: 0.5,
+              }}
+            >
+              前月比（月合計）: {monthDiff > 0 ? '+' : ''}
+              {formatCurrency(monthDiff)} ({monthDiff > 0 ? '+' : ''}
+              {monthDiffPercent}%)
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{
+                color: dailyAverageDiff > 0 ? 'error.main' : dailyAverageDiff < 0 ? 'success.main' : 'text.secondary',
+              }}
+            >
+              前月比（1日平均）: {dailyAverageDiff > 0 ? '+' : ''}
+              {formatCurrency(dailyAverageDiff)}
+            </Typography>
+          </>
+        )}
+        {specialTotal > 0 && (
           <Typography
             variant="body2"
-            sx={{
-              color: monthDiff > 0 ? 'error.main' : monthDiff < 0 ? 'success.main' : 'text.secondary',
-              mt: 0.5,
-            }}
+            sx={{ mt: 0.5, color: 'warning.main' }}
           >
-            前月比（月合計）: {monthDiff > 0 ? '+' : ''}
-            {formatCurrency(monthDiff)} ({monthDiff > 0 ? '+' : ''}
-            {monthDiffPercent}%)
+            ⭐️ 特別な支出: {formatCurrency(specialTotal)}
           </Typography>
         )}
         {fixedCosts.length > 0 && (
@@ -165,6 +212,98 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
 
       {/* カテゴリ別ドーナツチャート */}
       <CategoryDonutChart categoryTotals={categoryTotals} total={monthTotal} />
+
+      {/* カテゴリ別前月比較（折りたたみ） */}
+      {categoryComparison.length > 0 && prevMonthTotal > 0 && (
+        <>
+          <Divider sx={{ mt: 1 }} />
+          <ListItemButton
+            onClick={() => setComparisonOpen(!comparisonOpen)}
+            sx={{ py: 1, px: 2, justifyContent: 'space-between' }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              前月比較（カテゴリ別）
+            </Typography>
+            {comparisonOpen ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+          </ListItemButton>
+          <Collapse in={comparisonOpen}>
+            <Box sx={{ px: 1, pb: 1 }}>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: 'auto 1fr 1fr 1fr',
+                  gap: 0.5,
+                  alignItems: 'center',
+                  fontSize: '0.75rem',
+                  px: 1,
+                }}
+              >
+                <Box />
+                <Typography variant="caption" color="text.secondary" align="right">
+                  今月
+                </Typography>
+                <Typography variant="caption" color="text.secondary" align="right">
+                  前月
+                </Typography>
+                <Typography variant="caption" color="text.secondary" align="right">
+                  差分
+                </Typography>
+                {categoryComparison.map((row) => {
+                  const diffColor =
+                    row.diff > 0 ? 'error.main'
+                    : row.diff < 0 ? 'success.main'
+                    : 'text.secondary';
+                  const sign = row.diff > 0 ? '+' : '';
+                  const percentText =
+                    row.diffPercent === null
+                      ? '新規'
+                      : `${sign}${row.diffPercent}%`;
+                  return (
+                    <Box key={row.id} sx={{ display: 'contents' }}>
+                      <Chip
+                        label={row.label}
+                        size="small"
+                        sx={{
+                          backgroundColor: row.color,
+                          color: '#fff',
+                          fontSize: '0.65rem',
+                          height: 20,
+                          justifySelf: 'start',
+                        }}
+                      />
+                      <Typography variant="body2" align="right" sx={{ fontSize: '0.8rem' }}>
+                        {formatCurrency(row.current)}
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        align="right"
+                        color="text.secondary"
+                        sx={{ fontSize: '0.8rem' }}
+                      >
+                        {formatCurrency(row.previous)}
+                      </Typography>
+                      <Box sx={{ textAlign: 'right' }}>
+                        <Typography
+                          variant="body2"
+                          sx={{ color: diffColor, fontSize: '0.8rem', lineHeight: 1.2 }}
+                        >
+                          {sign}{formatCurrency(row.diff)}
+                        </Typography>
+                        <Typography
+                          variant="caption"
+                          sx={{ color: diffColor, fontSize: '0.65rem' }}
+                        >
+                          {percentText}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  );
+                })}
+              </Box>
+            </Box>
+          </Collapse>
+        </>
+      )}
 
       {/* 月固定費の内訳（折りたたみ） */}
       {(fixedCosts.length > 0 || !isPast) && (
@@ -244,7 +383,15 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
       )}
 
       {/* 支出一覧（特別な支出を除外中も全件表示・カテゴリフィルタあり） */}
-      <ExpenseListSection expenses={expenses} />
+      <ExpenseListSection expenses={expenses} onEditExpense={setEditingExpense} />
+
+      {/* 支出編集ダイアログ */}
+      <ExpenseDialog
+        open={editingExpense !== null}
+        date={editingExpense?.date ?? ''}
+        initialEditExpense={editingExpense ?? undefined}
+        onClose={() => setEditingExpense(null)}
+      />
 
       <FixedCostItemDialog
         open={fixedCostDialogMode !== null}
