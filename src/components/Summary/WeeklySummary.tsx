@@ -11,6 +11,8 @@ import { aggregateByCategory } from '../../utils/chart';
 import { CategoryDonutChart } from './CategoryDonutChart';
 import { DailyBarChart } from './DailyBarChart';
 import { ExpenseListSection } from './ExpenseListSection';
+import { ExpenseDialog } from '../ExpenseDialog/ExpenseDialog';
+import type { Expense } from '../../types';
 
 interface WeeklySummaryProps {
   includeSpecial: boolean;
@@ -20,6 +22,7 @@ export function WeeklySummary({ includeSpecial }: WeeklySummaryProps) {
   const today = new Date();
   const { start: initialStart } = getWeekRange(today);
   const [weekStart, setWeekStart] = useState(initialStart);
+  const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
   const weekEnd = new Date(weekStart);
   weekEnd.setDate(weekStart.getDate() + 6);
@@ -85,6 +88,11 @@ export function WeeklySummary({ includeSpecial }: WeeklySummaryProps) {
   const prevWeekTotal = filteredPrevWeekExpenses.reduce((sum, e) => sum + e.amount, 0);
   const weekDiff = weekTotal - prevWeekTotal;
   const weekDiffPercent = prevWeekTotal > 0 ? Math.round((weekDiff / prevWeekTotal) * 100) : 0;
+
+  // 特別な支出の合計（トグルに関わらず当週の全特別支出を集計）
+  const specialTotal = expenses
+    .filter((e) => e.isSpecial)
+    .reduce((sum, e) => sum + e.amount, 0);
 
   // カテゴリ別集計
   const categoryTotals = aggregateByCategory(filteredExpenses);
@@ -201,10 +209,30 @@ export function WeeklySummary({ includeSpecial }: WeeklySummaryProps) {
             {weekDiffPercent}%)
           </Typography>
         )}
+
+        {specialTotal > 0 && (
+          <Typography
+            variant="body2"
+            sx={{
+              color: budgetColor === 'common.white' ? 'common.white' : 'warning.main',
+              mt: 0.5,
+            }}
+          >
+            ⭐️ 特別な支出: {formatCurrency(specialTotal)}
+          </Typography>
+        )}
       </Box>
 
-      {/* 支出一覧（メモ確認用） */}
-      <ExpenseListSection expenses={filteredExpenses} />
+      {/* 支出一覧（特別な支出を除外中も全件表示） */}
+      <ExpenseListSection expenses={expenses} onEditExpense={setEditingExpense} />
+
+      {/* 支出編集ダイアログ */}
+      <ExpenseDialog
+        open={editingExpense !== null}
+        date={editingExpense?.date ?? ''}
+        initialEditExpense={editingExpense ?? undefined}
+        onClose={() => setEditingExpense(null)}
+      />
     </Box>
   );
 }

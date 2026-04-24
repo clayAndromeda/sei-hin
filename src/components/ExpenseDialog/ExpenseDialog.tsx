@@ -25,14 +25,16 @@ import {
 import { formatCurrency } from '../../utils/format';
 import { CATEGORIES, DEFAULT_CATEGORY } from '../../constants/categories';
 import { useMemoSuggestions } from '../../hooks/useMemoSuggestions';
+import type { Expense } from '../../types';
 
 interface ExpenseDialogProps {
   open: boolean;
   date: string; // "YYYY-MM-DD"
   onClose: () => void;
+  initialEditExpense?: Expense; // ダイアログを開いた直後に指定支出を編集モードにする
 }
 
-export function ExpenseDialog({ open, date, onClose }: ExpenseDialogProps) {
+export function ExpenseDialog({ open, date, onClose, initialEditExpense }: ExpenseDialogProps) {
   const expenses = useExpensesByDate(date);
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
@@ -54,6 +56,17 @@ export function ExpenseDialog({ open, date, onClose }: ExpenseDialogProps) {
       setEditingId(null);
     }
   }, [open]);
+
+  // ダイアログを開いたときに編集対象が指定されていればプリセット
+  useEffect(() => {
+    if (open && initialEditExpense) {
+      setEditingId(initialEditExpense.id);
+      setAmount(String(initialEditExpense.amount));
+      setMemo(initialEditExpense.memo);
+      setCategory(initialEditExpense.category);
+      setIsSpecial(initialEditExpense.isSpecial ?? false);
+    }
+  }, [open, initialEditExpense]);
 
   const dayTotal = expenses.reduce((sum, e) => sum + e.amount, 0);
 
