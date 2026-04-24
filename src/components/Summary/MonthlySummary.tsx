@@ -1,14 +1,26 @@
 import { useState } from 'react';
-import { Box, IconButton, Typography, List, ListItem, ListItemText, Divider, Button } from '@mui/material';
+import {
+  Box,
+  IconButton,
+  Typography,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemButton,
+  Divider,
+  Button,
+  Collapse,
+} from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import TodayIcon from '@mui/icons-material/Today';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { useExpensesByMonth } from '../../hooks/useExpenses';
 import { useMonthlyFixedCosts } from '../../hooks/useFixedCosts';
 import { formatCurrency } from '../../utils/format';
-import { toDateString } from '../../utils/date';
 import {
   formatYearMonth,
   formatYearMonthLabel,
@@ -19,48 +31,6 @@ import { CategoryDonutChart } from './CategoryDonutChart';
 import { ExpenseListSection } from './ExpenseListSection';
 import { FixedCostItemDialog } from './FixedCostItemDialog';
 import type { FixedCostItem } from '../../types';
-
-interface WeekBreakdown {
-  label: string;
-  total: number;
-}
-
-// 月の日付を月曜始まりの週に分割する
-function getWeekBreakdowns(
-  year: number,
-  month: number,
-  expensesByDate: Map<string, number>,
-): WeekBreakdown[] {
-  const lastDay = new Date(year, month + 1, 0).getDate();
-  const weeks: WeekBreakdown[] = [];
-  let weekNum = 1;
-  let weekStart = 1;
-
-  for (let d = 1; d <= lastDay; d++) {
-    const date = new Date(year, month, d);
-    const dayOfWeek = date.getDay();
-    // 日曜（0）が週の最終日、または月末
-    const isEndOfWeek = dayOfWeek === 0;
-    const isLastDay = d === lastDay;
-
-    if (isEndOfWeek || isLastDay) {
-      let total = 0;
-      for (let i = weekStart; i <= d; i++) {
-        const dateStr = toDateString(new Date(year, month, i));
-        total += expensesByDate.get(dateStr) ?? 0;
-      }
-
-      const m = month + 1;
-      const label = `第${weekNum}週 (${m}/${weekStart}-${m}/${d})`;
-      weeks.push({ label, total });
-
-      weekNum++;
-      weekStart = d + 1;
-    }
-  }
-
-  return weeks;
-}
 
 interface MonthlySummaryProps {
   includeSpecial: boolean;
@@ -74,6 +44,7 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
     useState<'add' | 'edit' | null>(null);
   const [fixedCostDialogItem, setFixedCostDialogItem] =
     useState<FixedCostItem | null>(null);
+  const [fixedCostOpen, setFixedCostOpen] = useState(false);
 
   const expenses = useExpensesByMonth(year, month);
   const yearMonth = formatYearMonth(year, month);
@@ -86,7 +57,7 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
   const prevYear = month === 0 ? year - 1 : year;
   const prevMonthExpenses = useExpensesByMonth(prevYear, prevMonth);
 
-  // 特別な支出のフィルタリング
+  // 特別な支出のフィルタリング（集計用）
   const filteredExpenses = includeSpecial
     ? expenses
     : expenses.filter(e => !e.isSpecial);
@@ -107,14 +78,6 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
   const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
   const daysForAverage = isCurrentMonth ? today.getDate() : lastDayOfMonth;
   const dailyAverage = daysForAverage > 0 ? Math.floor(monthTotal / daysForAverage) : 0;
-
-  // 日付ごとの金額マップ
-  const expensesByDate = new Map<string, number>();
-  for (const e of filteredExpenses) {
-    expensesByDate.set(e.date, (expensesByDate.get(e.date) ?? 0) + e.amount);
-  }
-
-  const weekBreakdowns = getWeekBreakdowns(year, month, expensesByDate);
 
   // カテゴリ別集計
   const categoryTotals = aggregateByCategory(filteredExpenses);
@@ -203,90 +166,85 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
       {/* カテゴリ別ドーナツチャート */}
       <CategoryDonutChart categoryTotals={categoryTotals} total={monthTotal} />
 
-      <Divider>
-        <Typography variant="caption">週ごとの内訳</Typography>
-      </Divider>
-
-      {/* 週ごとの内訳 */}
-      <List dense>
-        {weekBreakdowns.map((week) => (
-          <ListItem key={week.label}>
-            <ListItemText primary={week.label} />
-            <Typography variant="body2">{formatCurrency(week.total)}</Typography>
-          </ListItem>
-        ))}
-      </List>
-
-      {/* 月固定費の内訳 */}
+      {/* 月固定費の内訳（折りたたみ） */}
       {(fixedCosts.length > 0 || !isPast) && (
         <>
-          <Divider>
-            <Typography variant="caption">固定費の内訳</Typography>
-          </Divider>
-          {fixedCosts.length > 0 ? (
-            <List dense>
-              {fixedCosts.map(({ item, amount, changedFrom }) => (
-                <ListItem
-                  key={item.id}
-                  secondaryAction={
-                    !isPast && (
-                      <IconButton
-                        edge="end"
-                        size="small"
-                        onClick={() => {
-                          setFixedCostDialogItem(item);
-                          setFixedCostDialogMode('edit');
-                        }}
-                        aria-label={`${item.name}を編集`}
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                    )
-                  }
-                >
-                  <ListItemText
-                    primary={item.name}
-                    secondary={
-                      changedFrom
-                        ? `${formatYearMonthLabel(changedFrom)}以降の金額`
-                        : '初期金額'
-                    }
-                  />
-                  <Typography variant="body2" sx={{ mr: isPast ? 0 : 5 }}>
-                    {formatCurrency(amount)}
-                  </Typography>
-                </ListItem>
-              ))}
-            </List>
-          ) : (
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{ textAlign: 'center', py: 2 }}
-            >
-              固定費は登録されていません
+          <Divider sx={{ mt: 1 }} />
+          <ListItemButton
+            onClick={() => setFixedCostOpen(!fixedCostOpen)}
+            sx={{ py: 1, px: 2, justifyContent: 'space-between' }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              固定費の内訳（{fixedCosts.length}件・{formatCurrency(fixedCostTotal)}）
             </Typography>
-          )}
-          {!isPast && (
-            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-              <Button
-                size="small"
-                variant="outlined"
-                startIcon={<AddIcon />}
-                onClick={() => {
-                  setFixedCostDialogItem(null);
-                  setFixedCostDialogMode('add');
-                }}
+            {fixedCostOpen ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+          </ListItemButton>
+          <Collapse in={fixedCostOpen}>
+            {fixedCosts.length > 0 ? (
+              <List dense>
+                {fixedCosts.map(({ item, amount, changedFrom }) => (
+                  <ListItem
+                    key={item.id}
+                    secondaryAction={
+                      !isPast && (
+                        <IconButton
+                          edge="end"
+                          size="small"
+                          onClick={() => {
+                            setFixedCostDialogItem(item);
+                            setFixedCostDialogMode('edit');
+                          }}
+                          aria-label={`${item.name}を編集`}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                      )
+                    }
+                  >
+                    <ListItemText
+                      primary={item.name}
+                      secondary={
+                        changedFrom
+                          ? `${formatYearMonthLabel(changedFrom)}以降の金額`
+                          : '初期金額'
+                      }
+                    />
+                    <Typography variant="body2" sx={{ mr: isPast ? 0 : 5 }}>
+                      {formatCurrency(amount)}
+                    </Typography>
+                  </ListItem>
+                ))}
+              </List>
+            ) : (
+              <Typography
+                variant="body2"
+                color="text.secondary"
+                sx={{ textAlign: 'center', py: 2 }}
               >
-                項目を追加
-              </Button>
-            </Box>
-          )}
+                固定費は登録されていません
+              </Typography>
+            )}
+            {!isPast && (
+              <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+                <Button
+                  size="small"
+                  variant="outlined"
+                  startIcon={<AddIcon />}
+                  onClick={() => {
+                    setFixedCostDialogItem(null);
+                    setFixedCostDialogMode('add');
+                  }}
+                >
+                  項目を追加
+                </Button>
+              </Box>
+            )}
+          </Collapse>
         </>
       )}
 
-      {/* 支出一覧（メモ確認用） */}
-      <ExpenseListSection expenses={filteredExpenses} />
+      {/* 支出一覧（特別な支出を除外中も全件表示・カテゴリフィルタあり） */}
+      <ExpenseListSection expenses={expenses} />
 
       <FixedCostItemDialog
         open={fixedCostDialogMode !== null}

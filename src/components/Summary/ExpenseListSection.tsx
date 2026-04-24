@@ -17,11 +17,13 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import type { Expense } from '../../types';
 import { formatCurrency } from '../../utils/format';
-import { getCategoryById } from '../../constants/categories';
+import { CATEGORIES, getCategoryById, type CategoryId } from '../../constants/categories';
 
 interface ExpenseListSectionProps {
   expenses: Expense[];
 }
+
+type CategoryFilter = 'all' | CategoryId;
 
 // 日付でグループ化して降順に並べる
 function groupByDate(expenses: Expense[]): Map<string, Expense[]> {
@@ -43,12 +45,20 @@ function formatDateLabel(dateStr: string): string {
 
 export function ExpenseListSection({ expenses }: ExpenseListSectionProps) {
   const [open, setOpen] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
 
   if (expenses.length === 0) return null;
 
-  // メモ付きの支出数
+  // カテゴリフィルタ適用
+  const visibleExpenses =
+    categoryFilter === 'all'
+      ? expenses
+      : expenses.filter((e) => e.category === categoryFilter);
+
+  // メモ付きの支出数（ヘッダー表示はフィルタ前の全件ベースで揃える）
   const withMemo = expenses.filter((e) => e.memo && e.memo !== '（なし）').length;
-  const grouped = groupByDate(expenses);
+  const filteredTotal = visibleExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const grouped = groupByDate(visibleExpenses);
 
   return (
     <>
@@ -63,121 +73,169 @@ export function ExpenseListSection({ expenses }: ExpenseListSectionProps) {
         {open ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
       </ListItemButton>
       <Collapse in={open}>
-        <TableContainer sx={{ px: 1, pb: 1 }}>
-          <Table size="small" sx={{ '& td, & th': { py: 0.5, px: 0.75 } }}>
-            <TableHead>
-              <TableRow>
-                <TableCell sx={{ fontWeight: 'bold', fontSize: '0.75rem', color: 'text.secondary' }}>
-                  日付
-                </TableCell>
-                <TableCell sx={{ fontWeight: 'bold', fontSize: '0.75rem', color: 'text.secondary' }}>
-                  カテゴリ
-                </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold', fontSize: '0.75rem', color: 'text.secondary' }}>
-                  金額
-                </TableCell>
-                <TableCell sx={{ fontWeight: 'bold', fontSize: '0.75rem', color: 'text.secondary' }}>
-                  メモ
-                </TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {[...grouped.entries()].map(([date, items]) => {
-                const dayTotal = items.reduce((sum, e) => sum + e.amount, 0);
-                return items.map((expense, idx) => {
-                  const cat = getCategoryById(expense.category);
-                  const isLastInGroup = idx === items.length - 1;
-                  return (
-                    <TableRow
-                      key={expense.id}
-                      sx={{
-                        // ストライプ背景（日付グループ単位で交互）
-                        backgroundColor: [...grouped.keys()].indexOf(date) % 2 === 0
-                          ? 'transparent'
-                          : 'action.hover',
-                        // グループ最終行の下に区切り線
-                        ...(isLastInGroup && {
-                          '& td': { borderBottom: '2px solid', borderBottomColor: 'divider' },
-                        }),
-                      }}
-                    >
-                      {/* 日付セル: グループの最初の行だけ表示 */}
-                      <TableCell
+        {/* カテゴリフィルタ */}
+        <Box sx={{ px: 2, py: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
+          <Chip
+            label="すべて"
+            size="small"
+            variant={categoryFilter === 'all' ? 'filled' : 'outlined'}
+            color={categoryFilter === 'all' ? 'primary' : 'default'}
+            onClick={() => setCategoryFilter('all')}
+            sx={{ fontSize: '0.7rem', height: 22 }}
+          />
+          {CATEGORIES.map((cat) => {
+            const isSelected = categoryFilter === cat.id;
+            return (
+              <Chip
+                key={cat.id}
+                label={cat.label}
+                size="small"
+                variant={isSelected ? 'filled' : 'outlined'}
+                onClick={() => setCategoryFilter(cat.id)}
+                sx={{
+                  fontSize: '0.7rem',
+                  height: 22,
+                  backgroundColor: isSelected ? cat.color : 'transparent',
+                  color: isSelected ? '#fff' : 'text.primary',
+                  borderColor: cat.color,
+                  '&:hover': {
+                    backgroundColor: isSelected ? cat.color : `${cat.color}22`,
+                  },
+                }}
+              />
+            );
+          })}
+          {categoryFilter !== 'all' && (
+            <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
+              {visibleExpenses.length}件・{formatCurrency(filteredTotal)}
+            </Typography>
+          )}
+        </Box>
+        {visibleExpenses.length === 0 ? (
+          <Typography
+            variant="body2"
+            color="text.secondary"
+            sx={{ textAlign: 'center', py: 2 }}
+          >
+            該当する支出はありません
+          </Typography>
+        ) : (
+          <TableContainer sx={{ px: 1, pb: 1 }}>
+            <Table size="small" sx={{ '& td, & th': { py: 0.5, px: 0.75 } }}>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ fontWeight: 'bold', fontSize: '0.75rem', color: 'text.secondary' }}>
+                    日付
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', fontSize: '0.75rem', color: 'text.secondary' }}>
+                    カテゴリ
+                  </TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold', fontSize: '0.75rem', color: 'text.secondary' }}>
+                    金額
+                  </TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', fontSize: '0.75rem', color: 'text.secondary' }}>
+                    メモ
+                  </TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {[...grouped.entries()].map(([date, items]) => {
+                  const dayTotal = items.reduce((sum, e) => sum + e.amount, 0);
+                  return items.map((expense, idx) => {
+                    const cat = getCategoryById(expense.category);
+                    const isLastInGroup = idx === items.length - 1;
+                    return (
+                      <TableRow
+                        key={expense.id}
                         sx={{
-                          fontSize: '0.75rem',
-                          whiteSpace: 'nowrap',
-                          verticalAlign: 'top',
-                          ...(idx > 0 && { borderBottom: 'none' }),
+                          // ストライプ背景（日付グループ単位で交互）
+                          backgroundColor: [...grouped.keys()].indexOf(date) % 2 === 0
+                            ? 'transparent'
+                            : 'action.hover',
+                          // グループ最終行の下に区切り線
+                          ...(isLastInGroup && {
+                            '& td': { borderBottom: '2px solid', borderBottomColor: 'divider' },
+                          }),
                         }}
                       >
-                        {idx === 0 ? formatDateLabel(date) : ''}
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                          <Chip
-                            label={cat.label}
-                            size="small"
-                            sx={{
-                              backgroundColor: cat.color,
-                              color: '#fff',
-                              fontSize: '0.65rem',
-                              height: 18,
-                            }}
-                          />
-                          {expense.isSpecial && (
+                        {/* 日付セル: グループの最初の行だけ表示 */}
+                        <TableCell
+                          sx={{
+                            fontSize: '0.75rem',
+                            whiteSpace: 'nowrap',
+                            verticalAlign: 'top',
+                            ...(idx > 0 && { borderBottom: 'none' }),
+                          }}
+                        >
+                          {idx === 0 ? formatDateLabel(date) : ''}
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                             <Chip
-                              label="⭐️"
+                              label={cat.label}
                               size="small"
-                              color="warning"
-                              sx={{ fontSize: '0.6rem', height: 18 }}
+                              sx={{
+                                backgroundColor: cat.color,
+                                color: '#fff',
+                                fontSize: '0.65rem',
+                                height: 18,
+                              }}
                             />
-                          )}
-                        </Box>
-                      </TableCell>
-                      <TableCell align="right" sx={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
-                        {formatCurrency(expense.amount)}
-                      </TableCell>
-                      <TableCell
+                            {expense.isSpecial && (
+                              <Chip
+                                label="⭐️"
+                                size="small"
+                                color="warning"
+                                sx={{ fontSize: '0.6rem', height: 18 }}
+                              />
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell align="right" sx={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                          {formatCurrency(expense.amount)}
+                        </TableCell>
+                        <TableCell
+                          sx={{
+                            fontSize: '0.7rem',
+                            color: expense.memo && expense.memo !== '（なし）' ? 'text.primary' : 'text.disabled',
+                            maxWidth: 120,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {expense.memo || ''}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }).concat(
+                    // 日ごとの小計行
+                    items.length > 1 ? [(
+                      <TableRow
+                        key={`subtotal-${date}`}
                         sx={{
-                          fontSize: '0.7rem',
-                          color: expense.memo && expense.memo !== '（なし）' ? 'text.primary' : 'text.disabled',
-                          maxWidth: 120,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
+                          backgroundColor: [...grouped.keys()].indexOf(date) % 2 === 0
+                            ? 'transparent'
+                            : 'action.hover',
+                          '& td': { borderBottom: '2px solid', borderBottomColor: 'divider' },
                         }}
                       >
-                        {expense.memo || ''}
-                      </TableCell>
-                    </TableRow>
+                        <TableCell />
+                        <TableCell align="right" sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
+                          小計
+                        </TableCell>
+                        <TableCell align="right" sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}>
+                          {formatCurrency(dayTotal)}
+                        </TableCell>
+                        <TableCell />
+                      </TableRow>
+                    )] : [],
                   );
-                }).concat(
-                  // 日ごとの小計行
-                  items.length > 1 ? [(
-                    <TableRow
-                      key={`subtotal-${date}`}
-                      sx={{
-                        backgroundColor: [...grouped.keys()].indexOf(date) % 2 === 0
-                          ? 'transparent'
-                          : 'action.hover',
-                        '& td': { borderBottom: '2px solid', borderBottomColor: 'divider' },
-                      }}
-                    >
-                      <TableCell />
-                      <TableCell align="right" sx={{ fontSize: '0.7rem', color: 'text.secondary' }}>
-                        小計
-                      </TableCell>
-                      <TableCell align="right" sx={{ fontSize: '0.8rem', fontWeight: 'bold' }}>
-                        {formatCurrency(dayTotal)}
-                      </TableCell>
-                      <TableCell />
-                    </TableRow>
-                  )] : [],
-                );
-              })}
-            </TableBody>
-          </Table>
-        </TableContainer>
+                })}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
       </Collapse>
     </>
   );
