@@ -3,7 +3,7 @@ import { DayCell } from './DayCell';
 import { WeekSummaryRow } from './WeekSummaryRow';
 import { getMonthDays, isSameDay, WEEKDAY_LABELS, toDateString, getWeekStartString, isInMonth } from '../../utils/date';
 import { useWeekBudget } from '../../hooks/useWeekBudget';
-import type { Expense, CalendarViewMode } from '../../types';
+import type { Expense } from '../../types';
 
 interface CalendarGridProps {
   year: number;
@@ -11,7 +11,6 @@ interface CalendarGridProps {
   expenses: Expense[];
   onDateClick: (dateString: string) => void;
   onWeekBudgetClick: (weekStart: string) => void; // 週予算設定ボタンクリック時
-  viewMode: CalendarViewMode; // 表示モード
 }
 
 // 週ごとのデータ構造
@@ -20,7 +19,7 @@ interface WeekData {
   weekStart: string; // 週開始日（月曜）のYYYY-MM-DD
 }
 
-export function CalendarGrid({ year, month, expenses, onDateClick, onWeekBudgetClick, viewMode }: CalendarGridProps) {
+export function CalendarGrid({ year, month, expenses, onDateClick, onWeekBudgetClick }: CalendarGridProps) {
   const days = getMonthDays(year, month);
   const today = new Date();
 
@@ -40,30 +39,7 @@ export function CalendarGrid({ year, month, expenses, onDateClick, onWeekBudgetC
   }
 
   // 当月に属する日付が1つもない週を除外
-  const validWeeks = weeks.filter(w => w.days.some(d => isInMonth(d, year, month)));
-
-  // モードに応じて表示する週をフィルタリング
-  let displayWeeks = validWeeks;
-
-  if (viewMode === 'current-week') {
-    // 今日が表示中の月に含まれるかチェック
-    const isTodayInCurrentMonth = today.getFullYear() === year && today.getMonth() === month;
-
-    if (isTodayInCurrentMonth) {
-      // 今日が含まれる週を表示
-      const currentWeekStart = getWeekStartString(today);
-      const currentWeek = validWeeks.find(w => w.weekStart === currentWeekStart);
-      if (currentWeek) {
-        displayWeeks = [currentWeek];
-      }
-    } else {
-      // 今日が含まれない月の場合、表示中の月の最初の週を表示
-      const firstWeekWithDates = validWeeks[0];
-      if (firstWeekWithDates) {
-        displayWeeks = [firstWeekWithDates];
-      }
-    }
-  }
+  const displayWeeks = weeks.filter(w => w.days.some(d => isInMonth(d, year, month)));
 
   return (
     <Box>
@@ -112,7 +88,6 @@ export function CalendarGrid({ year, month, expenses, onDateClick, onWeekBudgetC
             dailyTotals={dailyTotals}
             onDateClick={onDateClick}
             onWeekBudgetClick={onWeekBudgetClick}
-            showSummary={viewMode !== 'simple'}
           />
         );
       })}
@@ -130,7 +105,6 @@ interface WeekSectionProps {
   dailyTotals: Map<string, number>;
   onDateClick: (dateString: string) => void;
   onWeekBudgetClick: (weekStart: string) => void;
-  showSummary: boolean; // 週集計行を表示するか
 }
 
 function WeekSection({
@@ -142,7 +116,6 @@ function WeekSection({
   dailyTotals,
   onDateClick,
   onWeekBudgetClick,
-  showSummary,
 }: WeekSectionProps) {
   const weekBudget = useWeekBudget(week.weekStart);
   const todayStr = toDateString(today);
@@ -178,9 +151,8 @@ function WeekSection({
         })}
       </Box>
 
-      {/* 週集計行（シンプルモード以外で表示） */}
-      {showSummary && (
-        <WeekSummaryRow
+      {/* 週集計行 */}
+      <WeekSummaryRow
           weekStart={week.weekStart}
           weekTotal={weekTotal}
           weekBudget={weekBudget}
@@ -188,7 +160,6 @@ function WeekSection({
           isCurrentWeek={isCurrentWeek}
           onBudgetClick={() => onWeekBudgetClick(week.weekStart)}
         />
-      )}
     </Box>
   );
 }

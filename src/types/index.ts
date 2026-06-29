@@ -42,8 +42,6 @@ export interface WeekBudget {
   deleted?: boolean; // 削除フラグ（同期用）
 }
 
-// カレンダー表示モード
-export type CalendarViewMode = 'weekly' | 'current-week' | 'simple';
 
 // 月固定費の項目マスター（家賃、光熱費、サブスクなど）
 export interface FixedCostItem {

@@ -1,10 +1,7 @@
 import { useState } from 'react';
-import { Box, IconButton, Typography, ToggleButton, ToggleButtonGroup, Tooltip, useMediaQuery, useTheme, Paper, Divider, List, ListItem, ListItemText, FormControlLabel, Switch } from '@mui/material';
+import { Box, IconButton, Typography, Tooltip, useMediaQuery, useTheme, Paper, Divider, List, ListItem, ListItemText, FormControlLabel, Switch } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import ViewWeekIcon from '@mui/icons-material/ViewWeek';
-import TodayIcon from '@mui/icons-material/Today';
-import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import { CalendarGrid } from './CalendarGrid';
 import { ExpenseDialog } from '../ExpenseDialog/ExpenseDialog';
@@ -15,7 +12,6 @@ import { getMonthDays, toDateString } from '../../utils/date';
 import { formatCurrency } from '../../utils/format';
 import { aggregateByCategory } from '../../utils/chart';
 import { CategoryDonutChart } from '../Summary/CategoryDonutChart';
-import type { CalendarViewMode } from '../../types';
 
 interface CalendarViewProps {
   onDataChanged?: () => void;
@@ -27,7 +23,6 @@ export function CalendarView({ onDataChanged }: CalendarViewProps) {
   const [month, setMonth] = useState(today.getMonth());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<CalendarViewMode>('weekly');
   const [excludeSpecial, setExcludeSpecial] = usePersistedState('excludeSpecial', false);
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
@@ -134,38 +129,18 @@ export function CalendarView({ onDataChanged }: CalendarViewProps) {
             </Tooltip>
           </Box>
 
-          {/* モード切り替え */}
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-            <ToggleButtonGroup
-              size="small"
-              value={viewMode}
-              exclusive
-              onChange={(_, newMode) => newMode && setViewMode(newMode)}
-            >
-              <ToggleButton value="weekly">
-                <ViewWeekIcon fontSize="small" />
-              </ToggleButton>
-              <ToggleButton value="current-week">
-                <TodayIcon fontSize="small" />
-              </ToggleButton>
-              <ToggleButton value="simple">
-                <CalendarMonthIcon fontSize="small" />
-              </ToggleButton>
-            </ToggleButtonGroup>
-
-            {/* 特別な支出フィルタ */}
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={excludeSpecial}
-                  onChange={(e) => setExcludeSpecial(e.target.checked)}
-                  size="small"
-                />
-              }
-              label="特別な支出を除く"
-              sx={{ ml: 1, mb: 0 }}
-            />
-          </Box>
+          {/* 特別な支出フィルタ */}
+          <FormControlLabel
+            control={
+              <Switch
+                checked={excludeSpecial}
+                onChange={(e) => setExcludeSpecial(e.target.checked)}
+                size="small"
+              />
+            }
+            label="特別な支出を除く"
+            sx={{ mb: 0 }}
+          />
         </Box>
 
         {/* 月合計（モバイルのみ表示） */}
@@ -190,7 +165,6 @@ export function CalendarView({ onDataChanged }: CalendarViewProps) {
           expenses={filteredExpenses}
           onDateClick={(dateStr) => setSelectedDate(dateStr)}
           onWeekBudgetClick={(weekStart) => setSelectedWeekStart(weekStart)}
-          viewMode={viewMode}
         />
       </Box>
 
