@@ -56,8 +56,6 @@ export function ExpenseListSection({ expenses, onEditExpense }: ExpenseListSecti
     .filter((e) => categoryFilter === 'all' || e.category === categoryFilter)
     .filter((e) => !specialOnly || e.isSpecial);
 
-  // メモ付きの支出数（ヘッダー表示はフィルタ前の全件ベースで揃える）
-  const withMemo = expenses.filter((e) => e.memo && e.memo !== '（なし）').length;
   const filteredTotal = visibleExpenses.reduce((sum, e) => sum + e.amount, 0);
   const grouped = groupByDate(visibleExpenses);
 
@@ -69,7 +67,7 @@ export function ExpenseListSection({ expenses, onEditExpense }: ExpenseListSecti
         sx={{ py: 1, px: 2, justifyContent: 'space-between' }}
       >
         <Typography variant="body2" color="text.secondary">
-          支出一覧（{expenses.length}件{withMemo > 0 ? `・メモ${withMemo}件` : ''}）
+          支出一覧（{expenses.length}件）
         </Typography>
         {open ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
       </ListItemButton>

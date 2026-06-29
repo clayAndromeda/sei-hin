@@ -43,13 +43,13 @@ export function DayCell({ date, amount, isToday, otherMonth = false, onClick }: 
       >
         {date.getDate()}
       </Typography>
-      {!future && (
+      {(!future || amount > 0) && (
         <Typography
           variant="caption"
           sx={{
             fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
             lineHeight: 1.2,
-            color: isToday ? 'inherit' : 'text.secondary',
+            color: isToday ? 'inherit' : future ? 'text.disabled' : 'text.secondary',
           }}
         >
           {formatCurrency(amount)}
