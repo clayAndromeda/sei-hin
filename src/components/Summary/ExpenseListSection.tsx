@@ -47,14 +47,14 @@ function formatDateLabel(dateStr: string): string {
 export function ExpenseListSection({ expenses, onEditExpense }: ExpenseListSectionProps) {
   const [open, setOpen] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
+  const [specialOnly, setSpecialOnly] = useState(false);
 
   if (expenses.length === 0) return null;
 
-  // カテゴリフィルタ適用
-  const visibleExpenses =
-    categoryFilter === 'all'
-      ? expenses
-      : expenses.filter((e) => e.category === categoryFilter);
+  // カテゴリ・特別フィルタ適用
+  const visibleExpenses = expenses
+    .filter((e) => categoryFilter === 'all' || e.category === categoryFilter)
+    .filter((e) => !specialOnly || e.isSpecial);
 
   // メモ付きの支出数（ヘッダー表示はフィルタ前の全件ベースで揃える）
   const withMemo = expenses.filter((e) => e.memo && e.memo !== '（なし）').length;
@@ -106,7 +106,15 @@ export function ExpenseListSection({ expenses, onEditExpense }: ExpenseListSecti
               />
             );
           })}
-          {categoryFilter !== 'all' && (
+          <Chip
+            label="⭐️ 特別のみ"
+            size="small"
+            variant={specialOnly ? 'filled' : 'outlined'}
+            color={specialOnly ? 'warning' : 'default'}
+            onClick={() => setSpecialOnly(!specialOnly)}
+            sx={{ fontSize: '0.7rem', height: 22 }}
+          />
+          {(categoryFilter !== 'all' || specialOnly) && (
             <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
               {visibleExpenses.length}件・{formatCurrency(filteredTotal)}
             </Typography>
