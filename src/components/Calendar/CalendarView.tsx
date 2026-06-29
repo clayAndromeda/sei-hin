@@ -129,7 +129,10 @@ export function CalendarView({ onDataChanged }: CalendarViewProps) {
             </Tooltip>
           </Box>
 
-          {/* 特別な支出フィルタ */}
+        </Box>
+
+        {/* 特別な支出フィルタ */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: { xs: 1, sm: 2 } }}>
           <FormControlLabel
             control={
               <Switch
