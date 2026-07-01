@@ -28,7 +28,6 @@ import {
   isPastYearMonth,
 } from '../../utils/fixedCost';
 import { aggregateByCategory, aggregateFoodBySubcategory, buildCategoryComparison } from '../../utils/chart';
-import { FOOD_SUBCATEGORIES } from '../../constants/foodSubcategories';
 import { CategoryDonutChart } from './CategoryDonutChart';
 import { ExpenseListSection } from './ExpenseListSection';
 import { FixedCostItemDialog } from './FixedCostItemDialog';
@@ -202,21 +201,6 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
             ⭐️ 特別な支出: {formatCurrency(specialTotal)}
           </Typography>
         )}
-        {FOOD_SUBCATEGORIES.map((sub) => {
-          const total = foodSubcategoryTotals.get(sub.id) ?? 0;
-          if (total === 0) return null;
-          const percent = monthTotal > 0 ? Math.round((total / monthTotal) * 100) : 0;
-          return (
-            <Typography
-              key={sub.id}
-              variant="body2"
-              color="text.secondary"
-              sx={{ mt: 0.5 }}
-            >
-              {sub.label}: {formatCurrency(total)}（月合計の{percent}%）
-            </Typography>
-          );
-        })}
         {fixedCosts.length > 0 && (
           <>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
@@ -230,7 +214,11 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
       </Box>
 
       {/* カテゴリ別ドーナツチャート */}
-      <CategoryDonutChart categoryTotals={categoryTotals} total={monthTotal} />
+      <CategoryDonutChart
+        categoryTotals={categoryTotals}
+        total={monthTotal}
+        foodSubcategoryTotals={foodSubcategoryTotals}
+      />
 
       {/* カテゴリ別前月比較（折りたたみ） */}
       {categoryComparison.length > 0 && prevMonthTotal > 0 && (

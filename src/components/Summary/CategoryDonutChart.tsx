@@ -2,17 +2,21 @@ import { Box, Typography } from '@mui/material';
 import { PieChart, Pie, Cell, ResponsiveContainer, Label } from 'recharts';
 import { categoryMapToChartData } from '../../utils/chart';
 import { formatCurrency } from '../../utils/format';
+import { FOOD_SUBCATEGORIES } from '../../constants/foodSubcategories';
 
 interface CategoryDonutChartProps {
   categoryTotals: Map<string, number>;
   total: number;
   height?: number;
+  // 食費のサブカテゴリ別集計（間食・外食の内訳を「食費」の下に表示するため）
+  foodSubcategoryTotals?: Map<string, number>;
 }
 
 export function CategoryDonutChart({
   categoryTotals,
   total,
   height = 240,
+  foodSubcategoryTotals,
 }: CategoryDonutChartProps) {
   const chartData = categoryMapToChartData(categoryTotals);
 
@@ -58,34 +62,59 @@ export function CategoryDonutChart({
       {/* カスタム凡例 */}
       <Box sx={{ mt: 2, px: 2 }}>
         {chartData.map((item) => (
-          <Box
-            key={item.id}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              py: 0.5,
-            }}
-          >
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <Box
-                sx={{
-                  width: 12,
-                  height: 12,
-                  backgroundColor: item.color,
-                  borderRadius: '50%',
-                }}
-              />
-              <Typography variant="body2">{item.label}</Typography>
+          <Box key={item.id}>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                py: 0.5,
+              }}
+            >
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box
+                  sx={{
+                    width: 12,
+                    height: 12,
+                    backgroundColor: item.color,
+                    borderRadius: '50%',
+                  }}
+                />
+                <Typography variant="body2">{item.label}</Typography>
+              </Box>
+              <Typography variant="body2" fontWeight="medium">
+                {formatCurrency(item.value)}
+                {total > 0 && (
+                  <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 0.5 }}>
+                    ({Math.round((item.value / total) * 100)}%)
+                  </Typography>
+                )}
+              </Typography>
             </Box>
-            <Typography variant="body2" fontWeight="medium">
-              {formatCurrency(item.value)}
-              {total > 0 && (
-                <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 0.5 }}>
-                  ({Math.round((item.value / total) * 100)}%)
-                </Typography>
-              )}
-            </Typography>
+            {/* 食費のサブカテゴリ内訳（間食・外食） */}
+            {item.id === 'food' && foodSubcategoryTotals && FOOD_SUBCATEGORIES.map((sub) => {
+              const subTotal = foodSubcategoryTotals.get(sub.id) ?? 0;
+              if (subTotal === 0) return null;
+              return (
+                <Box
+                  key={sub.id}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    py: 0.25,
+                    pl: 3,
+                  }}
+                >
+                  <Typography variant="caption" color="text.secondary">
+                    {sub.label}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {formatCurrency(subTotal)}
+                  </Typography>
+                </Box>
+              );
+            })}
           </Box>
         ))}
       </Box>
