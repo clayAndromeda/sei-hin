@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   aggregateByCategory,
+  aggregateFoodBySubcategory,
   buildCategoryComparison,
   categoryMapToChartData,
 } from './chart';
@@ -53,6 +54,27 @@ describe('aggregateByCategory', () => {
     ];
     const result = aggregateByCategory(expenses);
     expect(result.get('food')).toBe(500);
+  });
+});
+
+describe('aggregateFoodBySubcategory', () => {
+  it('空配列の場合、空のMapを返す', () => {
+    const result = aggregateFoodBySubcategory([]);
+    expect(result.size).toBe(0);
+  });
+
+  it('食費・サブカテゴリありの支出のみ集計する', () => {
+    const expenses = [
+      createExpense({ id: '1', amount: 300, category: 'food', subcategory: 'snack' }),
+      createExpense({ id: '2', amount: 200, category: 'food', subcategory: 'snack' }),
+      createExpense({ id: '3', amount: 1000, category: 'food', subcategory: 'eating_out' }),
+      createExpense({ id: '4', amount: 500, category: 'food' }), // サブカテゴリなし
+      createExpense({ id: '5', amount: 900, category: 'transport', subcategory: 'snack' }), // 食費以外は無視
+    ];
+    const result = aggregateFoodBySubcategory(expenses);
+    expect(result.get('snack')).toBe(500);
+    expect(result.get('eating_out')).toBe(1000);
+    expect(result.size).toBe(2);
   });
 });
 

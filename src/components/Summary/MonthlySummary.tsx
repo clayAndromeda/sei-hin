@@ -27,7 +27,8 @@ import {
   formatYearMonthLabel,
   isPastYearMonth,
 } from '../../utils/fixedCost';
-import { aggregateByCategory, buildCategoryComparison } from '../../utils/chart';
+import { aggregateByCategory, aggregateFoodBySubcategory, buildCategoryComparison } from '../../utils/chart';
+import { FOOD_SUBCATEGORIES } from '../../constants/foodSubcategories';
 import { CategoryDonutChart } from './CategoryDonutChart';
 import { ExpenseListSection } from './ExpenseListSection';
 import { FixedCostItemDialog } from './FixedCostItemDialog';
@@ -92,6 +93,9 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
   const categoryTotals = aggregateByCategory(filteredExpenses);
   const prevCategoryTotals = aggregateByCategory(filteredPrevMonthExpenses);
   const categoryComparison = buildCategoryComparison(categoryTotals, prevCategoryTotals);
+
+  // 食費のサブカテゴリ別集計（間食の無駄遣いを把握するため）
+  const foodSubcategoryTotals = aggregateFoodBySubcategory(filteredExpenses);
 
   // 1日平均の前月比: 期間を揃えて比較する（MTD同士）
   // 当月進行中の場合、前月も同じ日数分のみを対象にする（例: 今日が4/5なら3/1〜3/5のみ）。
@@ -198,6 +202,21 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
             ⭐️ 特別な支出: {formatCurrency(specialTotal)}
           </Typography>
         )}
+        {FOOD_SUBCATEGORIES.map((sub) => {
+          const total = foodSubcategoryTotals.get(sub.id) ?? 0;
+          if (total === 0) return null;
+          const percent = monthTotal > 0 ? Math.round((total / monthTotal) * 100) : 0;
+          return (
+            <Typography
+              key={sub.id}
+              variant="body2"
+              color="text.secondary"
+              sx={{ mt: 0.5 }}
+            >
+              {sub.label}: {formatCurrency(total)}（月合計の{percent}%）
+            </Typography>
+          );
+        })}
         {fixedCosts.length > 0 && (
           <>
             <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>

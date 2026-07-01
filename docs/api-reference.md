@@ -5,8 +5,8 @@
 - `useExpensesByMonth(year, month)`: 月単位でリアクティブ取得
 - `useExpensesByDate(dateString)`: 日単位でリアクティブ取得
 - `useExpensesByDateRange(start, end)`: 範囲指定でリアクティブ取得
-- `addExpense(date, amount, memo, category, isSpecial)`: 新規追加
-- `updateExpense(id, amount, memo, category, isSpecial)`: 更新
+- `addExpense(date, amount, memo, category, isSpecial, subcategory?)`: 新規追加（subcategoryは食費のサブカテゴリ）
+- `updateExpense(id, amount, memo, category, isSpecial, subcategory?)`: 更新
 - `deleteExpense(id)`: 論理削除
 
 ## hooks/useSync.ts

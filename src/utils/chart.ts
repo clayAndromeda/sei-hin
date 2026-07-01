@@ -11,6 +11,16 @@ export function aggregateByCategory(expenses: Expense[]) {
   return categoryTotals;
 }
 
+// 食費のサブカテゴリ別集計（間食などの無駄遣いを把握するため）
+export function aggregateFoodBySubcategory(expenses: Expense[]) {
+  const totals = new Map<string, number>();
+  for (const e of expenses) {
+    if (e.category !== 'food' || !e.subcategory) continue;
+    totals.set(e.subcategory, (totals.get(e.subcategory) ?? 0) + e.amount);
+  }
+  return totals;
+}
+
 // Rechartsのデータ形式に変換
 export function categoryMapToChartData(categoryTotals: Map<string, number>) {
   return CATEGORIES.filter((cat) => categoryTotals.has(cat.id)).map((cat) => ({
