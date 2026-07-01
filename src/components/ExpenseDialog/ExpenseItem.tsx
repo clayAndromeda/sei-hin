@@ -3,6 +3,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import type { Expense } from '../../types';
 import { formatCurrency } from '../../utils/format';
 import { getCategoryById } from '../../constants/categories';
+import { getFoodSubcategoryById } from '../../constants/foodSubcategories';
 
 interface ExpenseItemProps {
   expense: Expense;
@@ -12,6 +13,7 @@ interface ExpenseItemProps {
 
 export function ExpenseItem({ expense, onDelete, onEdit }: ExpenseItemProps) {
   const cat = getCategoryById(expense.category);
+  const subcat = getFoodSubcategoryById(expense.subcategory);
 
   return (
     <ListItem
@@ -44,6 +46,19 @@ export function ExpenseItem({ expense, onDelete, onEdit }: ExpenseItemProps) {
                 height: 20,
               }}
             />
+            {subcat && (
+              <Chip
+                label={subcat.label}
+                size="small"
+                variant="outlined"
+                sx={{
+                  borderColor: cat.color,
+                  color: cat.color,
+                  fontSize: '0.7rem',
+                  height: 20,
+                }}
+              />
+            )}
             {expense.isSpecial && (
               <Chip
                 label="★"

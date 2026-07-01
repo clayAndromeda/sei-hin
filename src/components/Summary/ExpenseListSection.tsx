@@ -18,6 +18,7 @@ import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import type { Expense } from '../../types';
 import { formatCurrency } from '../../utils/format';
 import { CATEGORIES, getCategoryById, type CategoryId } from '../../constants/categories';
+import { getFoodSubcategoryById } from '../../constants/foodSubcategories';
 
 interface ExpenseListSectionProps {
   expenses: Expense[];
@@ -150,6 +151,7 @@ export function ExpenseListSection({ expenses, onEditExpense }: ExpenseListSecti
                   const dayTotal = items.reduce((sum, e) => sum + e.amount, 0);
                   return items.map((expense, idx) => {
                     const cat = getCategoryById(expense.category);
+                    const subcat = getFoodSubcategoryById(expense.subcategory);
                     const isLastInGroup = idx === items.length - 1;
                     return (
                       <TableRow
@@ -196,6 +198,14 @@ export function ExpenseListSection({ expenses, onEditExpense }: ExpenseListSecti
                                 height: 18,
                               }}
                             />
+                            {subcat && (
+                              <Chip
+                                label={subcat.label}
+                                size="small"
+                                variant="outlined"
+                                sx={{ borderColor: cat.color, color: cat.color, fontSize: '0.6rem', height: 18 }}
+                              />
+                            )}
                             {expense.isSpecial && (
                               <Chip
                                 label="⭐️"

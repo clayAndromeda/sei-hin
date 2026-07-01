@@ -55,6 +55,7 @@ export async function addExpense(
   memo: string,
   category: string = DEFAULT_CATEGORY,
   isSpecial: boolean = false,
+  subcategory?: string,
 ): Promise<void> {
   const now = new Date().toISOString();
   await db.expenses.add({
@@ -64,6 +65,7 @@ export async function addExpense(
     memo,
     category,
     isSpecial,
+    subcategory,
     createdAt: now,
     updatedAt: now,
   });
@@ -76,12 +78,14 @@ export async function updateExpense(
   memo: string,
   category: string,
   isSpecial: boolean,
+  subcategory?: string,
 ): Promise<void> {
   await db.expenses.update(id, {
     amount,
     memo,
     category,
     isSpecial,
+    subcategory,
     updatedAt: new Date().toISOString(),
   });
 }

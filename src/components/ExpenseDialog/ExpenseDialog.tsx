@@ -14,6 +14,10 @@ import {
   FormControlLabel,
   Checkbox,
   Autocomplete,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import { ExpenseItem } from './ExpenseItem';
 import {
@@ -24,6 +28,7 @@ import {
 } from '../../hooks/useExpenses';
 import { formatCurrency } from '../../utils/format';
 import { CATEGORIES, DEFAULT_CATEGORY } from '../../constants/categories';
+import { FOOD_SUBCATEGORIES } from '../../constants/foodSubcategories';
 import { useMemoSuggestions } from '../../hooks/useMemoSuggestions';
 import type { Expense } from '../../types';
 
@@ -39,6 +44,7 @@ export function ExpenseDialog({ open, date, onClose, initialEditExpense }: Expen
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
   const [category, setCategory] = useState<string>(DEFAULT_CATEGORY);
+  const [subcategory, setSubcategory] = useState<string>('');
   const [isSpecial, setIsSpecial] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -52,6 +58,7 @@ export function ExpenseDialog({ open, date, onClose, initialEditExpense }: Expen
       setAmount('');
       setMemo('');
       setCategory(DEFAULT_CATEGORY);
+      setSubcategory('');
       setIsSpecial(false);
       setEditingId(null);
     }
@@ -64,9 +71,18 @@ export function ExpenseDialog({ open, date, onClose, initialEditExpense }: Expen
       setAmount(String(initialEditExpense.amount));
       setMemo(initialEditExpense.memo);
       setCategory(initialEditExpense.category);
+      setSubcategory(initialEditExpense.subcategory ?? '');
       setIsSpecial(initialEditExpense.isSpecial ?? false);
     }
   }, [open, initialEditExpense]);
+
+  // 食費以外に切り替えたらサブカテゴリをリセット
+  const handleCategoryChange = (newCategory: string) => {
+    setCategory(newCategory);
+    if (newCategory !== 'food') {
+      setSubcategory('');
+    }
+  };
 
   const dayTotal = expenses.reduce((sum, e) => sum + e.amount, 0);
 
@@ -74,24 +90,28 @@ export function ExpenseDialog({ open, date, onClose, initialEditExpense }: Expen
     const parsedAmount = parseInt(amount, 10);
     if (!parsedAmount || parsedAmount <= 0) return;
 
+    const subcategoryToSave = category === 'food' && subcategory ? subcategory : undefined;
+
     if (editingId) {
-      await updateExpense(editingId, parsedAmount, memo, category, isSpecial);
+      await updateExpense(editingId, parsedAmount, memo, category, isSpecial, subcategoryToSave);
       setEditingId(null);
     } else {
-      await addExpense(date, parsedAmount, memo, category, isSpecial);
+      await addExpense(date, parsedAmount, memo, category, isSpecial, subcategoryToSave);
     }
 
     setAmount('');
     setMemo('');
     setCategory(DEFAULT_CATEGORY);
+    setSubcategory('');
     setIsSpecial(false);
   };
 
-  const handleEdit = (expense: { id: string; amount: number; memo: string; category: string; isSpecial?: boolean }) => {
+  const handleEdit = (expense: { id: string; amount: number; memo: string; category: string; isSpecial?: boolean; subcategory?: string }) => {
     setEditingId(expense.id);
     setAmount(String(expense.amount));
     setMemo(expense.memo);
     setCategory(expense.category);
+    setSubcategory(expense.subcategory ?? '');
     setIsSpecial(expense.isSpecial ?? false);
   };
 
@@ -103,6 +123,7 @@ export function ExpenseDialog({ open, date, onClose, initialEditExpense }: Expen
         setAmount('');
         setMemo('');
         setCategory(DEFAULT_CATEGORY);
+        setSubcategory('');
       }
     }
   };
@@ -112,6 +133,7 @@ export function ExpenseDialog({ open, date, onClose, initialEditExpense }: Expen
     setAmount('');
     setMemo('');
     setCategory(DEFAULT_CATEGORY);
+    setSubcategory('');
     setIsSpecial(false);
   };
 
@@ -137,7 +159,7 @@ export function ExpenseDialog({ open, date, onClose, initialEditExpense }: Expen
               key={cat.id}
               label={cat.label}
               size="small"
-              onClick={() => setCategory(cat.id)}
+              onClick={() => handleCategoryChange(cat.id)}
               sx={{
                 backgroundColor: category === cat.id ? cat.color : 'transparent',
                 color: category === cat.id ? '#fff' : 'text.primary',
@@ -149,6 +171,28 @@ export function ExpenseDialog({ open, date, onClose, initialEditExpense }: Expen
             />
           ))}
         </Box>
+
+        {/* 食費のサブカテゴリ選択（間食の無駄遣いなどを把握するため） */}
+        {category === 'food' && (
+          <FormControl size="small" fullWidth sx={{ mb: 1 }}>
+            <InputLabel id="subcategory-label">サブカテゴリ</InputLabel>
+            <Select
+              labelId="subcategory-label"
+              label="サブカテゴリ"
+              value={subcategory}
+              onChange={(e) => setSubcategory(e.target.value)}
+            >
+              <MenuItem value="">
+                <em>なし</em>
+              </MenuItem>
+              {FOOD_SUBCATEGORIES.map((sub) => (
+                <MenuItem key={sub.id} value={sub.id}>
+                  {sub.label}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+        )}
 
         {/* 特別な支出フラグ */}
         <FormControlLabel
