@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   aggregateByCategory,
   aggregateFoodBySubcategory,
+  aggregateFoodSubcategoryCount,
   buildCategoryComparison,
+  buildFoodSubcategoryMonthlyTrend,
   categoryMapToChartData,
 } from './chart';
 import type { Expense } from '../types';
@@ -75,6 +77,53 @@ describe('aggregateFoodBySubcategory', () => {
     expect(result.get('snack')).toBe(500);
     expect(result.get('eating_out')).toBe(1000);
     expect(result.size).toBe(2);
+  });
+});
+
+describe('aggregateFoodSubcategoryCount', () => {
+  it('空配列の場合、空のMapを返す', () => {
+    const result = aggregateFoodSubcategoryCount([]);
+    expect(result.size).toBe(0);
+  });
+
+  it('食費・サブカテゴリありの支出のみ回数をカウントする', () => {
+    const expenses = [
+      createExpense({ id: '1', amount: 300, category: 'food', subcategory: 'snack' }),
+      createExpense({ id: '2', amount: 200, category: 'food', subcategory: 'snack' }),
+      createExpense({ id: '3', amount: 1000, category: 'food', subcategory: 'eating_out' }),
+      createExpense({ id: '4', amount: 500, category: 'food' }), // サブカテゴリなし
+      createExpense({ id: '5', amount: 900, category: 'transport', subcategory: 'snack' }), // 食費以外は無視
+    ];
+    const result = aggregateFoodSubcategoryCount(expenses);
+    expect(result.get('snack')).toBe(2);
+    expect(result.get('eating_out')).toBe(1);
+    expect(result.size).toBe(2);
+  });
+});
+
+describe('buildFoodSubcategoryMonthlyTrend', () => {
+  it('指定月数分の月次カウントを古い順で返す（データなしは0）', () => {
+    const result = buildFoodSubcategoryMonthlyTrend([], 2026, 1, 3); // 2026年2月まで3ヶ月分（0-indexed: 1=2月）
+    expect(result.map((m) => m.yearMonth)).toEqual(['2025-12', '2026-01', '2026-02']);
+    expect(result.map((m) => m.label)).toEqual(['12月', '1月', '2月']);
+    for (const m of result) {
+      expect(m.counts).toEqual({ snack: 0, eating_out: 0 });
+    }
+  });
+
+  it('各月の食費サブカテゴリ回数を正しく集計する', () => {
+    const expenses = [
+      createExpense({ id: '1', date: '2026-01-05', category: 'food', subcategory: 'snack' }),
+      createExpense({ id: '2', date: '2026-01-20', category: 'food', subcategory: 'snack' }),
+      createExpense({ id: '3', date: '2026-02-01', category: 'food', subcategory: 'eating_out' }),
+      createExpense({ id: '4', date: '2025-12-31', category: 'food', subcategory: 'eating_out' }),
+      createExpense({ id: '5', date: '2026-01-10', category: 'transport', subcategory: 'snack' }), // 食費以外は無視
+    ];
+    const result = buildFoodSubcategoryMonthlyTrend(expenses, 2026, 1, 3);
+    const [dec, jan, feb] = result;
+    expect(dec.counts).toEqual({ snack: 0, eating_out: 1 });
+    expect(jan.counts).toEqual({ snack: 2, eating_out: 0 });
+    expect(feb.counts).toEqual({ snack: 0, eating_out: 1 });
   });
 });
 
