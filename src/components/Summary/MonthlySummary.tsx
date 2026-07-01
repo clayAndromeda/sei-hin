@@ -19,20 +19,30 @@ import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import { useExpensesByMonth } from '../../hooks/useExpenses';
+import { useExpensesByMonth, useExpensesByDateRange } from '../../hooks/useExpenses';
 import { useMonthlyFixedCosts } from '../../hooks/useFixedCosts';
 import { formatCurrency } from '../../utils/format';
+import { toDateString } from '../../utils/date';
 import {
   formatYearMonth,
   formatYearMonthLabel,
   isPastYearMonth,
 } from '../../utils/fixedCost';
-import { aggregateByCategory, aggregateFoodBySubcategory, buildCategoryComparison } from '../../utils/chart';
+import {
+  aggregateByCategory,
+  aggregateFoodBySubcategory,
+  buildCategoryComparison,
+  buildFoodSubcategoryMonthlyTrend,
+} from '../../utils/chart';
+import { FOOD_SUBCATEGORIES } from '../../constants/foodSubcategories';
 import { CategoryDonutChart } from './CategoryDonutChart';
+import { FoodFrequencyTrendChart } from './FoodFrequencyTrendChart';
 import { ExpenseListSection } from './ExpenseListSection';
 import { FixedCostItemDialog } from './FixedCostItemDialog';
 import { ExpenseDialog } from '../ExpenseDialog/ExpenseDialog';
 import type { Expense, FixedCostItem } from '../../types';
+
+const FREQUENCY_TREND_MONTHS = 6;
 
 interface MonthlySummaryProps {
   includeSpecial: boolean;
@@ -48,6 +58,7 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
     useState<FixedCostItem | null>(null);
   const [fixedCostOpen, setFixedCostOpen] = useState(false);
   const [comparisonOpen, setComparisonOpen] = useState(false);
+  const [frequencyOpen, setFrequencyOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
   const expenses = useExpensesByMonth(year, month);
@@ -95,6 +106,27 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
 
   // 食費のサブカテゴリ別集計（間食の無駄遣いを把握するため）
   const foodSubcategoryTotals = aggregateFoodBySubcategory(filteredExpenses);
+
+  // 外食・間食の回数推移（直近6ヶ月、当月含む）
+  const trendRangeStart = new Date(year, month - (FREQUENCY_TREND_MONTHS - 1), 1);
+  const trendRangeEnd = new Date(year, month + 1, 0);
+  const trendExpenses = useExpensesByDateRange(
+    toDateString(trendRangeStart),
+    toDateString(trendRangeEnd),
+  );
+  const filteredTrendExpenses = includeSpecial
+    ? trendExpenses
+    : trendExpenses.filter((e) => !e.isSpecial);
+  const foodFrequencyTrend = buildFoodSubcategoryMonthlyTrend(
+    filteredTrendExpenses,
+    year,
+    month,
+    FREQUENCY_TREND_MONTHS,
+  );
+  const currentMonthFrequency = foodFrequencyTrend[foodFrequencyTrend.length - 1].counts;
+  const hasFrequencyData = foodFrequencyTrend.some((m) =>
+    FOOD_SUBCATEGORIES.some((sub) => m.counts[sub.id] > 0),
+  );
 
   // 1日平均の前月比: 期間を揃えて比較する（MTD同士）
   // 当月進行中の場合、前月も同じ日数分のみを対象にする（例: 今日が4/5なら3/1〜3/5のみ）。
@@ -308,6 +340,32 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
                 })}
               </Box>
             </Box>
+          </Collapse>
+        </>
+      )}
+
+      {/* 外食・間食の回数推移（折りたたみ） */}
+      {hasFrequencyData && (
+        <>
+          <Divider sx={{ mt: 1 }} />
+          <ListItemButton
+            onClick={() => setFrequencyOpen(!frequencyOpen)}
+            sx={{ py: 1, px: 2, justifyContent: 'space-between' }}
+          >
+            <Typography variant="body2" color="text.secondary">
+              外食・間食の回数（
+              {FOOD_SUBCATEGORIES.map(
+                (sub) => `${sub.label} ${currentMonthFrequency[sub.id] ?? 0}回`,
+              ).join('・')}
+              ）
+            </Typography>
+            {frequencyOpen ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
+          </ListItemButton>
+          <Collapse in={frequencyOpen}>
+            <Typography variant="caption" color="text.secondary" sx={{ px: 2 }}>
+              直近{FREQUENCY_TREND_MONTHS}ヶ月の推移
+            </Typography>
+            <FoodFrequencyTrendChart data={foodFrequencyTrend} />
           </Collapse>
         </>
       )}

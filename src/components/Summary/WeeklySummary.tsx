@@ -7,7 +7,8 @@ import { getWeekRange, toDateString } from '../../utils/date';
 import { useExpensesByDateRange } from '../../hooks/useExpenses';
 import { useWeekBudget } from '../../hooks/useWeekBudget';
 import { formatCurrency } from '../../utils/format';
-import { aggregateByCategory } from '../../utils/chart';
+import { aggregateByCategory, aggregateFoodSubcategoryCount } from '../../utils/chart';
+import { FOOD_SUBCATEGORIES } from '../../constants/foodSubcategories';
 import { CategoryDonutChart } from './CategoryDonutChart';
 import { DailyBarChart } from './DailyBarChart';
 import { ExpenseListSection } from './ExpenseListSection';
@@ -96,6 +97,12 @@ export function WeeklySummary({ includeSpecial }: WeeklySummaryProps) {
 
   // カテゴリ別集計
   const categoryTotals = aggregateByCategory(filteredExpenses);
+
+  // 外食・間食の回数
+  const foodSubcategoryCounts = aggregateFoodSubcategoryCount(filteredExpenses);
+  const hasFoodSubcategoryCounts = FOOD_SUBCATEGORIES.some(
+    (sub) => (foodSubcategoryCounts.get(sub.id) ?? 0) > 0,
+  );
 
   // 平均の分母: 当週なら今日までの日数、過去週なら7
   const todayStr = toDateString(today);
@@ -207,6 +214,18 @@ export function WeeklySummary({ includeSpecial }: WeeklySummaryProps) {
             前週比: {weekDiff > 0 ? '+' : ''}
             {formatCurrency(weekDiff)} ({weekDiff > 0 ? '+' : ''}
             {weekDiffPercent}%)
+          </Typography>
+        )}
+
+        {hasFoodSubcategoryCounts && (
+          <Typography
+            variant="body2"
+            color={budgetColor === 'common.white' ? 'common.white' : 'text.secondary'}
+            sx={{ mt: 0.5 }}
+          >
+            {FOOD_SUBCATEGORIES.map(
+              (sub) => `${sub.label} ${foodSubcategoryCounts.get(sub.id) ?? 0}回`,
+            ).join('・')}
           </Typography>
         )}
 

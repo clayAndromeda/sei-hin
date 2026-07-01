@@ -1,5 +1,6 @@
 import type { Expense } from '../types';
 import { CATEGORIES } from '../constants/categories';
+import { FOOD_SUBCATEGORIES } from '../constants/foodSubcategories';
 
 // カテゴリ別集計
 export function aggregateByCategory(expenses: Expense[]) {
@@ -19,6 +20,48 @@ export function aggregateFoodBySubcategory(expenses: Expense[]) {
     totals.set(e.subcategory, (totals.get(e.subcategory) ?? 0) + e.amount);
   }
   return totals;
+}
+
+// 食費のサブカテゴリ別回数集計（外食・間食の頻度を把握するため）
+export function aggregateFoodSubcategoryCount(expenses: Expense[]) {
+  const counts = new Map<string, number>();
+  for (const e of expenses) {
+    if (e.category !== 'food' || !e.subcategory) continue;
+    counts.set(e.subcategory, (counts.get(e.subcategory) ?? 0) + 1);
+  }
+  return counts;
+}
+
+export interface MonthlySubcategoryCount {
+  yearMonth: string; // "YYYY-MM"
+  label: string; // "2月"
+  counts: Record<string, number>; // サブカテゴリID -> 回数
+}
+
+// 外食・間食の回数の月次推移（endYear/endMonthを含む直近monthCountヶ月分、古い順）
+// expensesにはあらかじめ対象期間全体の支出を渡す
+export function buildFoodSubcategoryMonthlyTrend(
+  expenses: Expense[],
+  endYear: number,
+  endMonth: number, // 0-indexed
+  monthCount: number,
+): MonthlySubcategoryCount[] {
+  const result: MonthlySubcategoryCount[] = [];
+  for (let i = monthCount - 1; i >= 0; i--) {
+    const d = new Date(endYear, endMonth - i, 1);
+    const y = d.getFullYear();
+    const m = d.getMonth();
+    const ym = `${y}-${String(m + 1).padStart(2, '0')}`;
+    const monthExpenses = expenses.filter((e) => e.date.startsWith(ym));
+    const counts: Record<string, number> = {};
+    for (const sub of FOOD_SUBCATEGORIES) {
+      counts[sub.id] = monthExpenses.filter(
+        (e) => e.category === 'food' && e.subcategory === sub.id,
+      ).length;
+    }
+    result.push({ yearMonth: ym, label: `${m + 1}月`, counts });
+  }
+  return result;
 }
 
 // Rechartsのデータ形式に変換
