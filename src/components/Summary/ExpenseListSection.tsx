@@ -2,9 +2,6 @@ import { useState } from 'react';
 import {
   Box,
   Typography,
-  Divider,
-  Collapse,
-  ListItemButton,
   Table,
   TableBody,
   TableCell,
@@ -13,16 +10,17 @@ import {
   TableRow,
   Chip,
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import type { Expense } from '../../types';
 import { formatCurrency } from '../../utils/format';
 import { CATEGORIES, getCategoryById, type CategoryId } from '../../constants/categories';
 import { getFoodSubcategoryById } from '../../constants/foodSubcategories';
+import { SectionCard } from './SectionCard';
 
 interface ExpenseListSectionProps {
   expenses: Expense[];
   onEditExpense?: (expense: Expense) => void;
+  // 開閉状態の永続化キー（月次・週次で別々に保持する）
+  storageKey?: string;
 }
 
 type CategoryFilter = 'all' | CategoryId;
@@ -45,8 +43,11 @@ function formatDateLabel(dateStr: string): string {
   return `${d.getMonth() + 1}/${d.getDate()}（${weekdays[d.getDay()]}）`;
 }
 
-export function ExpenseListSection({ expenses, onEditExpense }: ExpenseListSectionProps) {
-  const [open, setOpen] = useState(false);
+export function ExpenseListSection({
+  expenses,
+  onEditExpense,
+  storageKey = 'summary.expensesOpen',
+}: ExpenseListSectionProps) {
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
   const [specialOnly, setSpecialOnly] = useState(false);
 
@@ -61,18 +62,11 @@ export function ExpenseListSection({ expenses, onEditExpense }: ExpenseListSecti
   const grouped = groupByDate(visibleExpenses);
 
   return (
-    <>
-      <Divider sx={{ mt: 1 }} />
-      <ListItemButton
-        onClick={() => setOpen(!open)}
-        sx={{ py: 1, px: 2, justifyContent: 'space-between' }}
-      >
-        <Typography variant="body2" color="text.secondary">
-          支出一覧（{expenses.length}件）
-        </Typography>
-        {open ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-      </ListItemButton>
-      <Collapse in={open}>
+    <SectionCard
+      title="支出一覧"
+      summary={`${expenses.length}件`}
+      storageKey={storageKey}
+    >
         {/* カテゴリフィルタ */}
         <Box sx={{ px: 2, py: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>
           <Chip
@@ -261,7 +255,6 @@ export function ExpenseListSection({ expenses, onEditExpense }: ExpenseListSecti
             </Table>
           </TableContainer>
         )}
-      </Collapse>
-    </>
+    </SectionCard>
   );
 }

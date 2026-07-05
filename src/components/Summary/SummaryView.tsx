@@ -1,10 +1,11 @@
-import { useState } from 'react';
 import { Box, Tabs, Tab } from '@mui/material';
 import { WeeklySummary } from './WeeklySummary';
 import { MonthlySummary } from './MonthlySummary';
+import { usePersistedState } from '../../hooks/usePersistedState';
 
 export function SummaryView() {
-  const [tab, setTab] = useState(0);
+  // 最後に見ていたタブ（月次/週次）を記憶する
+  const [tab, setTab] = usePersistedState('summary.tab', 0);
 
   return (
     <Box

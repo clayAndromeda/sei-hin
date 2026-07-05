@@ -6,20 +6,17 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemButton,
   Divider,
   Button,
-  Collapse,
   Chip,
   Paper,
+  Stack,
 } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import TodayIcon from '@mui/icons-material/Today';
 import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import { useExpensesByMonth, useExpensesByDateRange } from '../../hooks/useExpenses';
 import { useMonthlyFixedCosts } from '../../hooks/useFixedCosts';
 import { formatCurrency } from '../../utils/format';
@@ -40,6 +37,7 @@ import { CategoryDonutChart } from './CategoryDonutChart';
 import { FoodFrequencyTrendChart } from './FoodFrequencyTrendChart';
 import { ExpenseListSection } from './ExpenseListSection';
 import { FixedCostItemDialog } from './FixedCostItemDialog';
+import { SectionCard } from './SectionCard';
 import { ExpenseDialog } from '../ExpenseDialog/ExpenseDialog';
 import type { Expense, FixedCostItem } from '../../types';
 
@@ -53,9 +51,6 @@ export function MonthlySummary() {
     useState<'add' | 'edit' | null>(null);
   const [fixedCostDialogItem, setFixedCostDialogItem] =
     useState<FixedCostItem | null>(null);
-  const [fixedCostOpen, setFixedCostOpen] = useState(false);
-  const [comparisonOpen, setComparisonOpen] = useState(false);
-  const [frequencyOpen, setFrequencyOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
 
   const expenses = useExpensesByMonth(year, month);
@@ -155,9 +150,9 @@ export function MonthlySummary() {
   };
 
   return (
-    <Box>
+    <Stack spacing={1.5}>
       {/* 月切り替え */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1, gap: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
         <IconButton onClick={goToPrevMonth} size="small">
           <ChevronLeftIcon />
         </IconButton>
@@ -179,7 +174,7 @@ export function MonthlySummary() {
       </Box>
 
       {/* 支出サマリーカード（総支出＝変動費＋固定費を一目で把握できるようにする） */}
-      <Paper variant="outlined" sx={{ mx: 2, mb: 2, p: 2 }}>
+      <Paper variant="outlined" sx={{ p: 2 }}>
         <Typography variant="body2" color="text.secondary">
           総支出（変動費 + 固定費）
         </Typography>
@@ -244,27 +239,25 @@ export function MonthlySummary() {
       </Paper>
 
       {/* カテゴリ別ドーナツチャート */}
-      <CategoryDonutChart
-        categoryTotals={categoryTotals}
-        total={monthTotal}
-        foodSubcategoryTotals={foodSubcategoryTotals}
-      />
+      <SectionCard
+        title="カテゴリ別内訳"
+        storageKey="summary.month.categoryOpen"
+        defaultOpen
+      >
+        <CategoryDonutChart
+          categoryTotals={categoryTotals}
+          total={monthTotal}
+          foodSubcategoryTotals={foodSubcategoryTotals}
+        />
+      </SectionCard>
 
-      {/* カテゴリ別前月比較（折りたたみ） */}
+      {/* カテゴリ別前月比較 */}
       {categoryComparison.length > 0 && prevMonthTotal > 0 && (
-        <>
-          <Divider sx={{ mt: 1 }} />
-          <ListItemButton
-            onClick={() => setComparisonOpen(!comparisonOpen)}
-            sx={{ py: 1, px: 2, justifyContent: 'space-between' }}
-          >
-            <Typography variant="body2" color="text.secondary">
-              前月比較（カテゴリ別）
-            </Typography>
-            {comparisonOpen ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-          </ListItemButton>
-          <Collapse in={comparisonOpen}>
-            <Box sx={{ px: 1, pb: 1 }}>
+        <SectionCard
+          title="前月比較（カテゴリ別）"
+          storageKey="summary.month.comparisonOpen"
+        >
+            <Box sx={{ px: 1, py: 1 }}>
               <Box
                 sx={{
                   display: 'grid',
@@ -338,50 +331,36 @@ export function MonthlySummary() {
                 })}
               </Box>
             </Box>
-          </Collapse>
-        </>
+        </SectionCard>
       )}
 
-      {/* 外食・間食の回数推移（折りたたみ） */}
+      {/* 外食・間食の回数推移 */}
       {hasFrequencyData && (
-        <>
-          <Divider sx={{ mt: 1 }} />
-          <ListItemButton
-            onClick={() => setFrequencyOpen(!frequencyOpen)}
-            sx={{ py: 1, px: 2, justifyContent: 'space-between' }}
-          >
-            <Typography variant="body2" color="text.secondary">
-              外食・間食の回数（
-              {FOOD_SUBCATEGORIES.map(
-                (sub) => `${sub.label} ${currentMonthFrequency[sub.id] ?? 0}回`,
-              ).join('・')}
-              ）
-            </Typography>
-            {frequencyOpen ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-          </ListItemButton>
-          <Collapse in={frequencyOpen}>
-            <Typography variant="caption" color="text.secondary" sx={{ px: 2 }}>
+        <SectionCard
+          title="外食・間食の回数"
+          summary={FOOD_SUBCATEGORIES.map(
+            (sub) => `${sub.label} ${currentMonthFrequency[sub.id] ?? 0}回`,
+          ).join('・')}
+          storageKey="summary.month.frequencyOpen"
+        >
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: 'block', px: 2, pt: 1 }}
+            >
               直近{FREQUENCY_TREND_MONTHS}ヶ月の推移
             </Typography>
             <FoodFrequencyTrendChart data={foodFrequencyTrend} />
-          </Collapse>
-        </>
+        </SectionCard>
       )}
 
-      {/* 月固定費の内訳（折りたたみ） */}
+      {/* 月固定費の内訳 */}
       {(fixedCosts.length > 0 || !isPast) && (
-        <>
-          <Divider sx={{ mt: 1 }} />
-          <ListItemButton
-            onClick={() => setFixedCostOpen(!fixedCostOpen)}
-            sx={{ py: 1, px: 2, justifyContent: 'space-between' }}
-          >
-            <Typography variant="body2" color="text.secondary">
-              固定費の内訳（{fixedCosts.length}件・{formatCurrency(fixedCostTotal)}）
-            </Typography>
-            {fixedCostOpen ? <ExpandLessIcon fontSize="small" /> : <ExpandMoreIcon fontSize="small" />}
-          </ListItemButton>
-          <Collapse in={fixedCostOpen}>
+        <SectionCard
+          title="固定費の内訳"
+          summary={`${fixedCosts.length}件・${formatCurrency(fixedCostTotal)}`}
+          storageKey="summary.month.fixedCostOpen"
+        >
             {fixedCosts.length > 0 ? (
               <List dense>
                 {fixedCosts.map(({ item, amount, changedFrom }) => (
@@ -441,12 +420,15 @@ export function MonthlySummary() {
                 </Button>
               </Box>
             )}
-          </Collapse>
-        </>
+        </SectionCard>
       )}
 
       {/* 支出一覧（カテゴリフィルタあり） */}
-      <ExpenseListSection expenses={expenses} onEditExpense={setEditingExpense} />
+      <ExpenseListSection
+        expenses={expenses}
+        onEditExpense={setEditingExpense}
+        storageKey="summary.month.expensesOpen"
+      />
 
       {/* 支出編集ダイアログ */}
       <ExpenseDialog
@@ -466,6 +448,6 @@ export function MonthlySummary() {
           setFixedCostDialogItem(null);
         }}
       />
-    </Box>
+    </Stack>
   );
 }

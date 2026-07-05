@@ -1,5 +1,14 @@
 import { useState } from 'react';
-import { Box, IconButton, Typography, Divider, Button } from '@mui/material';
+import {
+  Box,
+  IconButton,
+  Typography,
+  Divider,
+  Button,
+  Paper,
+  Stack,
+  LinearProgress,
+} from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import TodayIcon from '@mui/icons-material/Today';
@@ -12,6 +21,7 @@ import { FOOD_SUBCATEGORIES } from '../../constants/foodSubcategories';
 import { CategoryDonutChart } from './CategoryDonutChart';
 import { DailyBarChart } from './DailyBarChart';
 import { ExpenseListSection } from './ExpenseListSection';
+import { SectionCard } from './SectionCard';
 import { ExpenseDialog } from '../ExpenseDialog/ExpenseDialog';
 import type { Expense } from '../../types';
 
@@ -56,21 +66,13 @@ export function WeeklySummary() {
 
   const weekTotal = dailyTotals.reduce((sum, d) => sum + d.total, 0);
 
-  // 予算との差分計算と背景色の判定
-  let budgetText = '';
-  let budgetColor = 'text.secondary';
-  let budgetBackgroundColor = 'transparent'; // デフォルトは透明
-
-  if (weekBudget !== null) {
-    const remaining = weekBudget - weekTotal;
-    if (remaining >= 0) {
-      budgetText = `予算まであと${formatCurrency(remaining)}`;
-    } else {
-      budgetText = `予算超過: ${formatCurrency(Math.abs(remaining))}`;
-      budgetColor = 'common.white';
-      budgetBackgroundColor = 'error.main'; // 予算超過時は赤背景に白文字
-    }
-  }
+  // 予算との差分と消化率（進捗バー表示用）
+  const isOverBudget = weekBudget !== null && weekTotal > weekBudget;
+  const budgetRemaining = weekBudget !== null ? weekBudget - weekTotal : 0;
+  const budgetProgress =
+    weekBudget !== null && weekBudget > 0
+      ? Math.min((weekTotal / weekBudget) * 100, 100)
+      : 0;
 
   // 前週の合計
   const prevWeekTotal = prevWeekExpenses.reduce((sum, e) => sum + e.amount, 0);
@@ -128,9 +130,9 @@ export function WeeklySummary() {
   const formatShortDate = (d: Date) => `${d.getMonth() + 1}/${d.getDate()}`;
 
   return (
-    <Box>
+    <Stack spacing={1.5}>
       {/* 週切り替え */}
-      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 1, gap: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
         <IconButton onClick={goToPrevWeek} size="small">
           <ChevronLeftIcon />
         </IconButton>
@@ -151,50 +153,59 @@ export function WeeklySummary() {
         </Button>
       </Box>
 
-      {/* カテゴリ別ドーナツチャート */}
-      <CategoryDonutChart categoryTotals={categoryTotals} total={weekTotal} />
-
-      {/* 日別棒グラフ */}
-      <DailyBarChart dailyTotals={dailyTotals} expenses={expenses} />
-
-      <Divider sx={{ my: 1 }} />
-
-      {/* 合計・平均 */}
-      <Box
+      {/* 週サマリーカード（週合計と予算の消化状況を一目で把握できるようにする） */}
+      <Paper
+        variant="outlined"
         sx={{
-          px: 2,
-          py: 1.5,
-          backgroundColor: budgetBackgroundColor, // 予算超過時に背景色変更
-          borderRadius: 1,
-          transition: 'background-color 0.2s ease', // スムーズな色変更
+          p: 2,
+          ...(isOverBudget && { borderColor: 'error.main' }),
         }}
       >
-        <Typography variant="body1" fontWeight="bold" color={budgetColor === 'common.white' ? 'common.white' : 'text.primary'}>
-          週合計: {formatCurrency(weekTotal)}
+        <Typography variant="body2" color="text.secondary">
+          週合計
         </Typography>
-        <Typography variant="body2" color={budgetColor === 'common.white' ? 'common.white' : 'text.secondary'}>
-          1日平均: {formatCurrency(dailyAverage)}
+        <Typography variant="h4" fontWeight="bold" sx={{ lineHeight: 1.3 }}>
+          {formatCurrency(weekTotal)}
         </Typography>
 
-        {/* 予算情報 */}
+        {/* 予算の消化状況（進捗バー） */}
         {weekBudget !== null && (
-          <Typography
-            variant="body2"
-            sx={{
-              color: budgetColor,
-              mt: 0.5,
-              fontWeight: budgetColor === 'common.white' ? 'bold' : 'normal',
-            }}
-          >
-            {budgetText}
-          </Typography>
+          <Box sx={{ mt: 1 }}>
+            <LinearProgress
+              variant="determinate"
+              value={budgetProgress}
+              color={isOverBudget ? 'error' : 'primary'}
+              sx={{ height: 8, borderRadius: 4 }}
+            />
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: isOverBudget ? 'error.main' : 'text.secondary',
+                  fontWeight: isOverBudget ? 'bold' : 'normal',
+                }}
+              >
+                {isOverBudget
+                  ? `予算超過: ${formatCurrency(Math.abs(budgetRemaining))}`
+                  : `予算まであと${formatCurrency(budgetRemaining)}`}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                予算 {formatCurrency(weekBudget)}
+              </Typography>
+            </Box>
+          </Box>
         )}
+
+        <Divider sx={{ my: 1.5 }} />
+        <Typography variant="body2" color="text.secondary">
+          1日平均: {formatCurrency(dailyAverage)}
+        </Typography>
 
         {prevWeekTotal > 0 && (
           <Typography
             variant="body2"
             sx={{
-              color: budgetColor === 'common.white' ? 'common.white' : (weekDiff > 0 ? 'error.main' : weekDiff < 0 ? 'success.main' : 'text.secondary'),
+              color: weekDiff > 0 ? 'error.main' : weekDiff < 0 ? 'success.main' : 'text.secondary',
               mt: 0.5,
             }}
           >
@@ -205,11 +216,7 @@ export function WeeklySummary() {
         )}
 
         {hasFoodSubcategoryCounts && (
-          <Typography
-            variant="body2"
-            color={budgetColor === 'common.white' ? 'common.white' : 'text.secondary'}
-            sx={{ mt: 0.5 }}
-          >
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
             {FOOD_SUBCATEGORIES.map(
               (sub) => `${sub.label} ${foodSubcategoryCounts.get(sub.id) ?? 0}回`,
             ).join('・')}
@@ -217,20 +224,36 @@ export function WeeklySummary() {
         )}
 
         {specialTotal > 0 && (
-          <Typography
-            variant="body2"
-            sx={{
-              color: budgetColor === 'common.white' ? 'common.white' : 'warning.main',
-              mt: 0.5,
-            }}
-          >
+          <Typography variant="body2" sx={{ mt: 0.5, color: 'warning.main' }}>
             ⭐️ 特別な支出: {formatCurrency(specialTotal)}
           </Typography>
         )}
-      </Box>
+      </Paper>
+
+      {/* カテゴリ別ドーナツチャート */}
+      <SectionCard
+        title="カテゴリ別内訳"
+        storageKey="summary.week.categoryOpen"
+        defaultOpen
+      >
+        <CategoryDonutChart categoryTotals={categoryTotals} total={weekTotal} />
+      </SectionCard>
+
+      {/* 日別棒グラフ */}
+      <SectionCard
+        title="日別の支出"
+        storageKey="summary.week.dailyOpen"
+        defaultOpen
+      >
+        <DailyBarChart dailyTotals={dailyTotals} expenses={expenses} />
+      </SectionCard>
 
       {/* 支出一覧 */}
-      <ExpenseListSection expenses={expenses} onEditExpense={setEditingExpense} />
+      <ExpenseListSection
+        expenses={expenses}
+        onEditExpense={setEditingExpense}
+        storageKey="summary.week.expensesOpen"
+      />
 
       {/* 支出編集ダイアログ */}
       <ExpenseDialog
@@ -239,6 +262,6 @@ export function WeeklySummary() {
         initialEditExpense={editingExpense ?? undefined}
         onClose={() => setEditingExpense(null)}
       />
-    </Box>
+    </Stack>
   );
 }
