@@ -15,11 +15,7 @@ import { ExpenseListSection } from './ExpenseListSection';
 import { ExpenseDialog } from '../ExpenseDialog/ExpenseDialog';
 import type { Expense } from '../../types';
 
-interface WeeklySummaryProps {
-  includeSpecial: boolean;
-}
-
-export function WeeklySummary({ includeSpecial }: WeeklySummaryProps) {
+export function WeeklySummary() {
   const today = new Date();
   const { start: initialStart } = getWeekRange(today);
   const [weekStart, setWeekStart] = useState(initialStart);
@@ -43,15 +39,6 @@ export function WeeklySummary({ includeSpecial }: WeeklySummaryProps) {
     toDateString(prevWeekEnd),
   );
 
-  // 特別な支出のフィルタリング
-  const filteredExpenses = includeSpecial
-    ? expenses
-    : expenses.filter(e => !e.isSpecial);
-
-  const filteredPrevWeekExpenses = includeSpecial
-    ? prevWeekExpenses
-    : prevWeekExpenses.filter(e => !e.isSpecial);
-
   // 週予算を取得
   const weekBudget = useWeekBudget(toDateString(weekStart));
 
@@ -61,7 +48,7 @@ export function WeeklySummary({ includeSpecial }: WeeklySummaryProps) {
     const d = new Date(weekStart);
     d.setDate(weekStart.getDate() + i);
     const dateStr = toDateString(d);
-    const total = filteredExpenses
+    const total = expenses
       .filter((e) => e.date === dateStr)
       .reduce((sum, e) => sum + e.amount, 0);
     dailyTotals.push({ date: d, dateStr, total });
@@ -86,20 +73,20 @@ export function WeeklySummary({ includeSpecial }: WeeklySummaryProps) {
   }
 
   // 前週の合計
-  const prevWeekTotal = filteredPrevWeekExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const prevWeekTotal = prevWeekExpenses.reduce((sum, e) => sum + e.amount, 0);
   const weekDiff = weekTotal - prevWeekTotal;
   const weekDiffPercent = prevWeekTotal > 0 ? Math.round((weekDiff / prevWeekTotal) * 100) : 0;
 
-  // 特別な支出の合計（トグルに関わらず当週の全特別支出を集計）
+  // 特別な支出の合計
   const specialTotal = expenses
     .filter((e) => e.isSpecial)
     .reduce((sum, e) => sum + e.amount, 0);
 
   // カテゴリ別集計
-  const categoryTotals = aggregateByCategory(filteredExpenses);
+  const categoryTotals = aggregateByCategory(expenses);
 
   // 外食・間食の回数
-  const foodSubcategoryCounts = aggregateFoodSubcategoryCount(filteredExpenses);
+  const foodSubcategoryCounts = aggregateFoodSubcategoryCount(expenses);
   const hasFoodSubcategoryCounts = FOOD_SUBCATEGORIES.some(
     (sub) => (foodSubcategoryCounts.get(sub.id) ?? 0) > 0,
   );
@@ -168,7 +155,7 @@ export function WeeklySummary({ includeSpecial }: WeeklySummaryProps) {
       <CategoryDonutChart categoryTotals={categoryTotals} total={weekTotal} />
 
       {/* 日別棒グラフ */}
-      <DailyBarChart dailyTotals={dailyTotals} expenses={filteredExpenses} />
+      <DailyBarChart dailyTotals={dailyTotals} expenses={expenses} />
 
       <Divider sx={{ my: 1 }} />
 
@@ -242,7 +229,7 @@ export function WeeklySummary({ includeSpecial }: WeeklySummaryProps) {
         )}
       </Box>
 
-      {/* 支出一覧（特別な支出を除外中も全件表示） */}
+      {/* 支出一覧 */}
       <ExpenseListSection expenses={expenses} onEditExpense={setEditingExpense} />
 
       {/* 支出編集ダイアログ */}

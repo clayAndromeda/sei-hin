@@ -1,15 +1,10 @@
 import { useState } from 'react';
-import { Box, Tabs, Tab, FormControlLabel, Switch } from '@mui/material';
+import { Box, Tabs, Tab } from '@mui/material';
 import { WeeklySummary } from './WeeklySummary';
 import { MonthlySummary } from './MonthlySummary';
-import { usePersistedState } from '../../hooks/usePersistedState';
 
 export function SummaryView() {
   const [tab, setTab] = useState(0);
-  const [excludeSpecial, setExcludeSpecial] = usePersistedState('excludeSpecial', false);
-
-  // includeSpecialは除外フラグの逆
-  const includeSpecial = !excludeSpecial;
 
   return (
     <Box
@@ -29,22 +24,8 @@ export function SummaryView() {
         <Tab label="週次" />
       </Tabs>
 
-      {/* 特別な支出フィルタ */}
-      <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-        <FormControlLabel
-          control={
-            <Switch
-              checked={excludeSpecial}
-              onChange={(e) => setExcludeSpecial(e.target.checked)}
-              size="small"
-            />
-          }
-          label="特別な支出を除く"
-        />
-      </Box>
-
-      {tab === 0 && <MonthlySummary includeSpecial={includeSpecial} />}
-      {tab === 1 && <WeeklySummary includeSpecial={includeSpecial} />}
+      {tab === 0 && <MonthlySummary />}
+      {tab === 1 && <WeeklySummary />}
     </Box>
   );
 }

@@ -45,11 +45,7 @@ import type { Expense, FixedCostItem } from '../../types';
 
 const FREQUENCY_TREND_MONTHS = 6;
 
-interface MonthlySummaryProps {
-  includeSpecial: boolean;
-}
-
-export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
+export function MonthlySummary() {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
@@ -73,24 +69,15 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
   const prevYear = month === 0 ? year - 1 : year;
   const prevMonthExpenses = useExpensesByMonth(prevYear, prevMonth);
 
-  // 特別な支出のフィルタリング（集計用）
-  const filteredExpenses = includeSpecial
-    ? expenses
-    : expenses.filter(e => !e.isSpecial);
+  const monthTotal = expenses.reduce((sum, e) => sum + e.amount, 0);
 
-  const filteredPrevMonthExpenses = includeSpecial
-    ? prevMonthExpenses
-    : prevMonthExpenses.filter(e => !e.isSpecial);
-
-  const monthTotal = filteredExpenses.reduce((sum, e) => sum + e.amount, 0);
-
-  // 特別な支出の合計（トグルに関わらず当月の全特別支出を集計）
+  // 特別な支出の合計
   const specialTotal = expenses
     .filter((e) => e.isSpecial)
     .reduce((sum, e) => sum + e.amount, 0);
 
   // 前月の合計
-  const prevMonthTotal = filteredPrevMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const prevMonthTotal = prevMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
   const monthDiff = monthTotal - prevMonthTotal;
   const monthDiffPercent = prevMonthTotal > 0 ? Math.round((monthDiff / prevMonthTotal) * 100) : 0;
 
@@ -101,12 +88,12 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
   const dailyAverage = daysForAverage > 0 ? Math.floor(monthTotal / daysForAverage) : 0;
 
   // カテゴリ別集計
-  const categoryTotals = aggregateByCategory(filteredExpenses);
-  const prevCategoryTotals = aggregateByCategory(filteredPrevMonthExpenses);
+  const categoryTotals = aggregateByCategory(expenses);
+  const prevCategoryTotals = aggregateByCategory(prevMonthExpenses);
   const categoryComparison = buildCategoryComparison(categoryTotals, prevCategoryTotals);
 
   // 食費のサブカテゴリ別集計（間食の無駄遣いを把握するため）
-  const foodSubcategoryTotals = aggregateFoodBySubcategory(filteredExpenses);
+  const foodSubcategoryTotals = aggregateFoodBySubcategory(expenses);
 
   // 外食・間食の回数推移（直近6ヶ月、当月含む）
   const trendRangeStart = new Date(year, month - (FREQUENCY_TREND_MONTHS - 1), 1);
@@ -115,11 +102,8 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
     toDateString(trendRangeStart),
     toDateString(trendRangeEnd),
   );
-  const filteredTrendExpenses = includeSpecial
-    ? trendExpenses
-    : trendExpenses.filter((e) => !e.isSpecial);
   const foodFrequencyTrend = buildFoodSubcategoryMonthlyTrend(
-    filteredTrendExpenses,
+    trendExpenses,
     year,
     month,
     FREQUENCY_TREND_MONTHS,
@@ -137,7 +121,7 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
     ? Math.min(today.getDate(), prevMonthLastDay)
     : prevMonthLastDay;
   const prevMonthTotalForAverage = isCurrentMonth
-    ? filteredPrevMonthExpenses
+    ? prevMonthExpenses
         .filter((e) => parseInt(e.date.slice(8, 10), 10) <= prevDaysForAverage)
         .reduce((sum, e) => sum + e.amount, 0)
     : prevMonthTotal;
@@ -461,7 +445,7 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
         </>
       )}
 
-      {/* 支出一覧（特別な支出を除外中も全件表示・カテゴリフィルタあり） */}
+      {/* 支出一覧（カテゴリフィルタあり） */}
       <ExpenseListSection expenses={expenses} onEditExpense={setEditingExpense} />
 
       {/* 支出編集ダイアログ */}
