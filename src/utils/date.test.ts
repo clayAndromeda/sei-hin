@@ -2,6 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   toDateString,
   formatDateJP,
+  addDaysToDateString,
   getMonthDays,
   isInMonth,
   getWeekRange,
@@ -41,6 +42,32 @@ describe('formatDateJP', () => {
 
   it('12月31日を正しくフォーマットする', () => {
     expect(formatDateJP(new Date(2026, 11, 31))).toBe('2026年12月31日');
+  });
+});
+
+describe('addDaysToDateString', () => {
+  it('1日進める', () => {
+    expect(addDaysToDateString('2026-02-14', 1)).toBe('2026-02-15');
+  });
+
+  it('1日戻す', () => {
+    expect(addDaysToDateString('2026-02-14', -1)).toBe('2026-02-13');
+  });
+
+  it('月をまたいで進める', () => {
+    expect(addDaysToDateString('2026-01-31', 1)).toBe('2026-02-01');
+  });
+
+  it('月をまたいで戻す', () => {
+    expect(addDaysToDateString('2026-03-01', -1)).toBe('2026-02-28');
+  });
+
+  it('年をまたいで進める', () => {
+    expect(addDaysToDateString('2026-12-31', 1)).toBe('2027-01-01');
+  });
+
+  it('年をまたいで戻す', () => {
+    expect(addDaysToDateString('2026-01-01', -1)).toBe('2025-12-31');
   });
 });
 

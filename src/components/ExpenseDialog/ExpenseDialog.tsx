@@ -18,7 +18,10 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  IconButton,
 } from '@mui/material';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { ExpenseItem } from './ExpenseItem';
 import {
   useExpensesByDate,
@@ -30,6 +33,7 @@ import { formatCurrency } from '../../utils/format';
 import { CATEGORIES, DEFAULT_CATEGORY } from '../../constants/categories';
 import { FOOD_SUBCATEGORIES } from '../../constants/foodSubcategories';
 import { useMemoSuggestions } from '../../hooks/useMemoSuggestions';
+import { addDaysToDateString, WEEKDAY_LABELS } from '../../utils/date';
 import type { Expense } from '../../types';
 
 interface ExpenseDialogProps {
@@ -37,9 +41,18 @@ interface ExpenseDialogProps {
   date: string; // "YYYY-MM-DD"
   onClose: () => void;
   initialEditExpense?: Expense; // ダイアログを開いた直後に指定支出を編集モードにする
+  // 前日/翌日への移動。指定するとタイトルに◀▶ボタンが表示され、
+  // ダイアログを閉じずに日を送りながら連続で入力・修正できる
+  onNavigateDate?: (date: string) => void;
 }
 
-export function ExpenseDialog({ open, date, onClose, initialEditExpense }: ExpenseDialogProps) {
+export function ExpenseDialog({
+  open,
+  date,
+  onClose,
+  initialEditExpense,
+  onNavigateDate,
+}: ExpenseDialogProps) {
   const expenses = useExpensesByDate(date);
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
@@ -137,11 +150,18 @@ export function ExpenseDialog({ open, date, onClose, initialEditExpense }: Expen
     setIsSpecial(false);
   };
 
-  // 日付表示用: "YYYY-MM-DD" → "YYYY年M月D日"
+  // 前日/翌日へ移動。別の日の記録を編集中のままにしないよう、フォームをリセットする
+  const handleNavigateDate = (days: number) => {
+    handleCancel();
+    onNavigateDate?.(addDaysToDateString(date, days));
+  };
+
+  // 日付表示用: "YYYY-MM-DD" → "YYYY年M月D日（曜）"
   const displayDate = date
     ? (() => {
-        const [y, m, d] = date.split('-');
-        return `${y}年${parseInt(m)}月${parseInt(d)}日`;
+        const d = new Date(date + 'T00:00:00');
+        const weekday = WEEKDAY_LABELS[(d.getDay() + 6) % 7];
+        return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${weekday}）`;
       })()
     : '';
 
@@ -150,7 +170,43 @@ export function ExpenseDialog({ open, date, onClose, initialEditExpense }: Expen
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{displayDate}の記録</DialogTitle>
+      <DialogTitle
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 1,
+        }}
+      >
+        {onNavigateDate && (
+          <IconButton
+            onClick={() => handleNavigateDate(-1)}
+            size="small"
+            aria-label="前の日へ"
+          >
+            <ChevronLeftIcon />
+          </IconButton>
+        )}
+        <Box
+          component="span"
+          sx={{
+            flexGrow: 1,
+            textAlign: onNavigateDate ? 'center' : 'left',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {displayDate}の記録
+        </Box>
+        {onNavigateDate && (
+          <IconButton
+            onClick={() => handleNavigateDate(1)}
+            size="small"
+            aria-label="次の日へ"
+          >
+            <ChevronRightIcon />
+          </IconButton>
+        )}
+      </DialogTitle>
       <DialogContent>
         {/* カテゴリ選択（チップで1タップ選択） */}
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 0.5, mt: 1, mb: 1 }}>

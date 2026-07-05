@@ -31,7 +31,8 @@ import { toDateString } from './utils/date';
 
 function App() {
   const [activeTab, setActiveTab] = useState(0);
-  const [todayExpenseDialogOpen, setTodayExpenseDialogOpen] = useState(false);
+  // FABから開く支出入力ダイアログの対象日（null=閉じる。◀▶で日を移動できる）
+  const [expenseDialogDate, setExpenseDialogDate] = useState<string | null>(null);
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
@@ -170,7 +171,7 @@ function App() {
       <Tooltip title="今日の支出を追加" placement="top">
         <Fab
           color="primary"
-          onClick={() => setTodayExpenseDialogOpen(true)}
+          onClick={() => setExpenseDialogDate(todayDateStr)}
           sx={{
             position: 'fixed',
             bottom: { xs: 72, md: 24 }, // モバイルはBottomNavigationの上
@@ -187,11 +188,12 @@ function App() {
         </Fab>
       </Tooltip>
 
-      {/* 今日の支出入力ダイアログ */}
+      {/* 支出入力ダイアログ（今日から◀▶で日を移動できる） */}
       <ExpenseDialog
-        open={todayExpenseDialogOpen}
-        date={todayDateStr}
-        onClose={() => setTodayExpenseDialogOpen(false)}
+        open={expenseDialogDate !== null}
+        date={expenseDialogDate ?? ''}
+        onClose={() => setExpenseDialogDate(null)}
+        onNavigateDate={setExpenseDialogDate}
       />
 
       {/* モバイル版: 下部ナビゲーション */}

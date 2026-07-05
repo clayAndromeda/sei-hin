@@ -11,6 +11,13 @@ export function formatDateJP(date: Date): string {
   return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
 }
 
+// "YYYY-MM-DD" 文字列にdays日を加算した "YYYY-MM-DD" を返す（負数で過去方向）
+export function addDaysToDateString(dateStr: string, days: number): string {
+  const date = new Date(dateStr + 'T00:00:00');
+  date.setDate(date.getDate() + days);
+  return toDateString(date);
+}
+
 // 月のカレンダーグリッド用日付配列を返す（月曜始まり）
 // 前月・次月のパディング含む6週分（42日）の配列
 // すべてのマスに実際のDateオブジェクトを返す（月をまたぐ週の合計計算に必要）

@@ -233,11 +233,12 @@ export function CalendarView({ onDataChanged }: CalendarViewProps) {
         </Box>
       )}
 
-      {/* 入力/編集ダイアログ */}
+      {/* 入力/編集ダイアログ（◀▶で日を移動しながら連続入力できる） */}
       <ExpenseDialog
         open={selectedDate !== null}
         date={selectedDate ?? ''}
         onClose={() => setSelectedDate(null)}
+        onNavigateDate={setSelectedDate}
       />
 
       {/* 週予算設定ダイアログ */}

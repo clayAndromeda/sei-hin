@@ -52,6 +52,14 @@ export function MonthlySummary() {
   const [fixedCostDialogItem, setFixedCostDialogItem] =
     useState<FixedCostItem | null>(null);
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
+  // 支出編集ダイアログの表示日（null=閉じる。◀▶で日を移動できる）
+  const [expenseDialogDate, setExpenseDialogDate] = useState<string | null>(null);
+
+  // 支出一覧から編集ダイアログを開く
+  const openExpenseDialog = (expense: Expense) => {
+    setEditingExpense(expense);
+    setExpenseDialogDate(expense.date);
+  };
 
   const expenses = useExpensesByMonth(year, month);
   const yearMonth = formatYearMonth(year, month);
@@ -426,16 +434,20 @@ export function MonthlySummary() {
       {/* 支出一覧（カテゴリフィルタあり） */}
       <ExpenseListSection
         expenses={expenses}
-        onEditExpense={setEditingExpense}
+        onEditExpense={openExpenseDialog}
         storageKey="summary.month.expensesOpen"
       />
 
-      {/* 支出編集ダイアログ */}
+      {/* 支出編集ダイアログ（◀▶で日を移動しながら連続修正できる） */}
       <ExpenseDialog
-        open={editingExpense !== null}
-        date={editingExpense?.date ?? ''}
+        open={expenseDialogDate !== null}
+        date={expenseDialogDate ?? ''}
         initialEditExpense={editingExpense ?? undefined}
-        onClose={() => setEditingExpense(null)}
+        onClose={() => {
+          setExpenseDialogDate(null);
+          setEditingExpense(null);
+        }}
+        onNavigateDate={setExpenseDialogDate}
       />
 
       <FixedCostItemDialog
