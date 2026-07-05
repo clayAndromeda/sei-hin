@@ -19,6 +19,8 @@ import {
   Select,
   MenuItem,
   IconButton,
+  useMediaQuery,
+  useTheme,
 } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -53,6 +55,10 @@ export function ExpenseDialog({
   initialEditExpense,
   onNavigateDate,
 }: ExpenseDialogProps) {
+  const theme = useTheme();
+  // スマホではフルスクリーン表示にする。中央配置のままだとキーボード表示時に
+  // ブラウザの自動スクロールでダイアログが跳ねて操作しづらいため
+  const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const expenses = useExpensesByDate(date);
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
@@ -169,7 +175,13 @@ export function ExpenseDialog({
   const isValid = !isNaN(parsedAmount) && parsedAmount > 0 && memo.trim().length > 0;
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+    <Dialog
+      open={open}
+      onClose={onClose}
+      fullWidth
+      maxWidth="sm"
+      fullScreen={fullScreen}
+    >
       <DialogTitle
         sx={{
           display: 'flex',

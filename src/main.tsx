@@ -50,6 +50,17 @@ const theme = createTheme({
         },
       },
     },
+    MuiInputBase: {
+      styleOverrides: {
+        input: {
+          // iOS Safariは16px未満のinputにフォーカスすると自動ズームし、
+          // 画面が勝手にスクロールしてしまう。モバイルでは16pxにして防ぐ
+          '@media (max-width: 599.95px)': {
+            fontSize: 16,
+          },
+        },
+      },
+    },
   },
 });
 
