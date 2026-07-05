@@ -3,7 +3,6 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
-  DialogActions,
   TextField,
   Button,
   List,
@@ -24,6 +23,7 @@ import {
 } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import CloseIcon from '@mui/icons-material/Close';
 import { ExpenseItem } from './ExpenseItem';
 import {
   useExpensesByDate,
@@ -218,6 +218,9 @@ export function ExpenseDialog({
             <ChevronRightIcon />
           </IconButton>
         )}
+        <IconButton onClick={onClose} size="small" aria-label="閉じる" sx={{ ml: 0.5 }}>
+          <CloseIcon />
+        </IconButton>
       </DialogTitle>
       <DialogContent>
         {/* カテゴリ選択（チップで1タップ選択） */}
@@ -351,9 +354,6 @@ export function ExpenseDialog({
           </>
         )}
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>閉じる</Button>
-      </DialogActions>
     </Dialog>
   );
 }
