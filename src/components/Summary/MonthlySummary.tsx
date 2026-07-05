@@ -11,6 +11,7 @@ import {
   Button,
   Collapse,
   Chip,
+  Paper,
 } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -193,13 +194,36 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
         </Button>
       </Box>
 
-      {/* 月合計・平均 */}
-      <Box sx={{ px: 2, mb: 2 }}>
-        <Typography variant="h6" fontWeight="bold">
-          月合計: {formatCurrency(monthTotal)}
-        </Typography>
+      {/* 支出サマリーカード（総支出＝変動費＋固定費を一目で把握できるようにする） */}
+      <Paper variant="outlined" sx={{ mx: 2, mb: 2, p: 2 }}>
         <Typography variant="body2" color="text.secondary">
-          1日平均: {formatCurrency(dailyAverage)}
+          総支出（変動費 + 固定費）
+        </Typography>
+        <Typography variant="h4" fontWeight="bold" sx={{ lineHeight: 1.3 }}>
+          {formatCurrency(monthTotal + fixedCostTotal)}
+        </Typography>
+        <Box sx={{ display: 'flex', gap: 2, mt: 1, alignItems: 'center' }}>
+          <Box>
+            <Typography variant="caption" color="text.secondary">
+              変動費
+            </Typography>
+            <Typography variant="body1" fontWeight="bold">
+              {formatCurrency(monthTotal)}
+            </Typography>
+          </Box>
+          <Divider orientation="vertical" flexItem />
+          <Box>
+            <Typography variant="caption" color="text.secondary">
+              固定費
+            </Typography>
+            <Typography variant="body1" fontWeight="bold">
+              {formatCurrency(fixedCostTotal)}
+            </Typography>
+          </Box>
+        </Box>
+        <Divider sx={{ my: 1.5 }} />
+        <Typography variant="body2" color="text.secondary">
+          1日平均（変動費）: {formatCurrency(dailyAverage)}
         </Typography>
         {prevMonthTotal > 0 && (
           <>
@@ -210,7 +234,7 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
                 mt: 0.5,
               }}
             >
-              前月比（月合計）: {monthDiff > 0 ? '+' : ''}
+              前月比（変動費）: {monthDiff > 0 ? '+' : ''}
               {formatCurrency(monthDiff)} ({monthDiff > 0 ? '+' : ''}
               {monthDiffPercent}%)
             </Typography>
@@ -233,17 +257,7 @@ export function MonthlySummary({ includeSpecial }: MonthlySummaryProps) {
             ⭐️ 特別な支出: {formatCurrency(specialTotal)}
           </Typography>
         )}
-        {fixedCosts.length > 0 && (
-          <>
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-              固定費: {formatCurrency(fixedCostTotal)}
-            </Typography>
-            <Typography variant="body2" fontWeight="bold" sx={{ mt: 0.5 }}>
-              月合計 + 固定費: {formatCurrency(monthTotal + fixedCostTotal)}
-            </Typography>
-          </>
-        )}
-      </Box>
+      </Paper>
 
       {/* カテゴリ別ドーナツチャート */}
       <CategoryDonutChart
