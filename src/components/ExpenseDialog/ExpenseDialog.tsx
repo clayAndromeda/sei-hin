@@ -35,6 +35,7 @@ import { formatCurrency } from '../../utils/format';
 import { CATEGORIES, DEFAULT_CATEGORY } from '../../constants/categories';
 import { FOOD_SUBCATEGORIES } from '../../constants/foodSubcategories';
 import { useMemoSuggestions } from '../../hooks/useMemoSuggestions';
+import { useDialogHistory } from '../../hooks/useDialogHistory';
 import { addDaysToDateString, WEEKDAY_LABELS } from '../../utils/date';
 import type { Expense } from '../../types';
 
@@ -66,6 +67,9 @@ export function ExpenseDialog({
   const [subcategory, setSubcategory] = useState<string>('');
   const [isSpecial, setIsSpecial] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // ブラウザの「戻る」でもダイアログを閉じられるようにする
+  useDialogHistory(open, onClose);
 
   const parsedAmountForSuggestion = parseInt(amount, 10) || 0;
   const suggestions = useMemoSuggestions(open, parsedAmountForSuggestion);
@@ -190,6 +194,9 @@ export function ExpenseDialog({
           gap: 1,
         }}
       >
+        <IconButton onClick={onClose} size="small" aria-label="閉じる" sx={{ mr: 0.5 }}>
+          <CloseIcon />
+        </IconButton>
         {onNavigateDate && (
           <IconButton
             onClick={() => handleNavigateDate(-1)}
@@ -218,9 +225,6 @@ export function ExpenseDialog({
             <ChevronRightIcon />
           </IconButton>
         )}
-        <IconButton onClick={onClose} size="small" aria-label="閉じる" sx={{ ml: 0.5 }}>
-          <CloseIcon />
-        </IconButton>
       </DialogTitle>
       <DialogContent>
         {/* カテゴリ選択（チップで1タップ選択） */}
