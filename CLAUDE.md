@@ -54,7 +54,7 @@ npm run test:watch # テストをウォッチモードで実行
 - **日付処理**: 必ず`utils/date.ts`の関数を使用（月曜始まり対応）
 - **金額表示**: `utils/format.ts`の`formatCurrency()`使用
 - **リアクティブクエリ**: DB変更時は自動でUIが更新される（`useLiveQuery`）
-- **同期タイミング**: 起動時 + CRUD操作後30秒デバウンス
+- **同期タイミング**: 起動時 + CRUD操作後30秒デバウンス + タブ非表示時に未同期分を即時同期。データ層の変更系関数が`services/syncScheduler.ts`の`markDataChanged()`を呼ぶことでスケジュールされる
 - **予算計算**: `isSpecial: true`の支出は予算から除外される
 - **テスト**: テストファイルはソースと同じディレクトリに `*.test.ts` で配置。`npm test` で全テスト実行
 

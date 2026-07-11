@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../services/db';
+import { markDataChanged } from '../services/syncScheduler';
 
 // デフォルト週予算を取得（リアクティブ）
 export function useDefaultWeekBudget(): number | null {
@@ -42,6 +43,7 @@ export async function setDefaultWeekBudget(budget: number): Promise<void> {
     key: 'defaultWeekBudgetUpdatedAt',
     value: now,
   });
+  markDataChanged();
 }
 
 // 週予算を個別設定
@@ -54,6 +56,7 @@ export async function setWeekBudget(
     budget,
     updatedAt: new Date().toISOString(),
   });
+  markDataChanged();
 }
 
 // 個別の週予算を論理削除（デフォルトに戻す）
@@ -65,5 +68,6 @@ export async function deleteWeekBudget(weekStartDate: string): Promise<void> {
       deleted: true,
       updatedAt: new Date().toISOString(),
     });
+    markDataChanged();
   }
 }

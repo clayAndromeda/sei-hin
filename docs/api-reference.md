@@ -12,8 +12,16 @@
 ## hooks/useSync.ts
 
 - `triggerSync()`: 手動同期実行
-- `scheduleDebouncedSync()`: 30秒デバウンス後に自動同期
-- 起動時に自動同期を実行
+- 起動時に自動同期を実行（前回セッションの未同期分もアップロードされる）
+- `syncScheduler`のデータ変更通知を購読し、30秒デバウンスで自動同期
+- タブ非表示（切替・最小化・クローズ）時に未同期分を即時同期
+
+## services/syncScheduler.ts
+
+- `markDataChanged()`: データ変更を記録して購読者に通知（変更系関数から呼ぶ）
+- `hasPendingChanges()`: 未同期の変更が残っているか（localStorageに永続化）
+- `clearPendingChanges()`: 同期成功後にフラグをクリア
+- `subscribeDataChanged(listener)`: 変更通知を購読（戻り値で解除）
 
 ## services/dropbox.ts
 

@@ -12,6 +12,14 @@
 
 ## 同期フロー（sync.ts）
 
+**トリガー（syncScheduler.ts + useSync.ts）:**
+- データ層の変更系関数（useExpenses / useWeekBudget / useFixedCosts）が`markDataChanged()`を呼ぶと、未同期フラグ（localStorage永続化）が立ち、30秒デバウンスの自動同期がスケジュールされる
+- タブ非表示（切替・最小化・クローズ）時、未同期分があればデバウンスを待たずに即時同期
+- 起動時の自動同期で、前回セッションで同期しきれなかった変更もアップロードされる
+- 同期成功時に未同期フラグをクリア
+
+**同期処理:**
+
 1. ローカルの全データ取得（expenses, weekBudgets, defaultWeekBudget、削除済み含む）
 2. Dropboxから`/data.json`をダウンロード
 3. マージ（updatedAt比較、カテゴリデフォルト補完、weekBudgets後方互換）

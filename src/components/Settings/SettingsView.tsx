@@ -24,6 +24,7 @@ import DownloadIcon from '@mui/icons-material/Download';
 import UploadIcon from '@mui/icons-material/Upload';
 import { getAuthUrl, disconnect } from '../../services/dropbox';
 import { db } from '../../services/db';
+import { markDataChanged } from '../../services/syncScheduler';
 import { useDefaultWeekBudget, setDefaultWeekBudget } from '../../hooks/useWeekBudget';
 import { formatCurrency } from '../../utils/format';
 import type { SeihinData } from '../../types';
@@ -35,7 +36,6 @@ interface SettingsViewProps {
   syncError: string | null;
   connected: boolean;
   onConnectionChange: (connected: boolean) => void;
-  onDataChanged?: () => void;
 }
 
 export function SettingsView({
@@ -45,7 +45,6 @@ export function SettingsView({
   syncError,
   connected,
   onConnectionChange,
-  onDataChanged,
 }: SettingsViewProps) {
   const [dropboxError, setDropboxError] = useState<string | null>(null);
   const defaultWeekBudget = useDefaultWeekBudget();
@@ -85,7 +84,6 @@ export function SettingsView({
     try {
       setBudgetError(null);
       await setDefaultWeekBudget(value);
-      onDataChanged?.();
       setBudgetInput('');
     } catch (error) {
       setBudgetError(
@@ -190,7 +188,8 @@ export function SettingsView({
         .join('・');
       setImportSuccess(`インポート完了: ${counts}`);
       setImportPreview(null);
-      onDataChanged?.();
+      // インポートはデータ層のフックを経由せずDBへ直接書き込むため、ここで変更を通知
+      markDataChanged();
     } catch (err) {
       setImportError(
         err instanceof Error ? err.message : 'インポートに失敗しました',

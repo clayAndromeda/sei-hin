@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../services/db';
+import { markDataChanged } from '../services/syncScheduler';
 import type { Expense } from '../types';
 import { DEFAULT_CATEGORY } from '../constants/categories';
 
@@ -69,6 +70,7 @@ export async function addExpense(
     createdAt: now,
     updatedAt: now,
   });
+  markDataChanged();
 }
 
 // 更新
@@ -88,6 +90,7 @@ export async function updateExpense(
     subcategory,
     updatedAt: new Date().toISOString(),
   });
+  markDataChanged();
 }
 
 // 論理削除
@@ -96,4 +99,5 @@ export async function deleteExpense(id: string): Promise<void> {
     deleted: true,
     updatedAt: new Date().toISOString(),
   });
+  markDataChanged();
 }

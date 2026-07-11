@@ -1,5 +1,6 @@
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../services/db';
+import { markDataChanged } from '../services/syncScheduler';
 import type { FixedCostAmountChange, FixedCostItem } from '../types';
 import {
   resolveMonthlyFixedCosts,
@@ -58,6 +59,7 @@ export async function addFixedCostItem(
     order: Date.now() * 1000 + Math.floor(Math.random() * 1000),
     updatedAt: now,
   });
+  markDataChanged();
 }
 
 // 項目の名前だけ更新（全月に影響）
@@ -69,6 +71,7 @@ export async function renameFixedCostItem(
     name,
     updatedAt: new Date().toISOString(),
   });
+  markDataChanged();
 }
 
 // 指定月以降の金額を設定する（effective-from 方式）
@@ -92,6 +95,7 @@ export async function setAmountForMonth(
       amount,
       updatedAt: now,
     });
+    markDataChanged();
     return;
   }
 
@@ -102,6 +106,7 @@ export async function setAmountForMonth(
     amount,
     updatedAt: now,
   });
+  markDataChanged();
 }
 
 // 項目を「この月以降」終了させる（過去月には残る）
@@ -131,6 +136,7 @@ export async function endFixedCostItem(
         c.deleted = true;
         c.updatedAt = now;
       });
+    markDataChanged();
     return;
   }
 
@@ -138,6 +144,7 @@ export async function endFixedCostItem(
     endYearMonth: yearMonth,
     updatedAt: now,
   });
+  markDataChanged();
 }
 
 // 「この月以降」の金額変更を論理削除（前の金額に戻す）
@@ -157,4 +164,5 @@ export async function clearAmountChange(
     deleted: true,
     updatedAt: new Date().toISOString(),
   });
+  markDataChanged();
 }

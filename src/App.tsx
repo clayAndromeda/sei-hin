@@ -43,7 +43,6 @@ function App() {
     connected,
     setConnected,
     triggerSync,
-    scheduleDebouncedSync,
   } = useSync();
 
   // 今日の日付を取得
@@ -152,7 +151,7 @@ function App() {
           overflow: 'auto',
         }}
       >
-        {activeTab === 0 && <CalendarView onDataChanged={scheduleDebouncedSync} />}
+        {activeTab === 0 && <CalendarView />}
         {activeTab === 1 && <SummaryView />}
         {activeTab === 2 && (
           <SettingsView
@@ -162,7 +161,6 @@ function App() {
             syncError={errorMessage}
             connected={connected}
             onConnectionChange={setConnected}
-            onDataChanged={scheduleDebouncedSync}
           />
         )}
       </Box>

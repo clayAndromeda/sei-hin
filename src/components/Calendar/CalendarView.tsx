@@ -13,11 +13,7 @@ import { formatCurrency } from '../../utils/format';
 import { aggregateByCategory } from '../../utils/chart';
 import { CategoryDonutChart } from '../Summary/CategoryDonutChart';
 
-interface CalendarViewProps {
-  onDataChanged?: () => void;
-}
-
-export function CalendarView({ onDataChanged }: CalendarViewProps) {
+export function CalendarView() {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
@@ -246,7 +242,6 @@ export function CalendarView({ onDataChanged }: CalendarViewProps) {
         open={selectedWeekStart !== null}
         weekStart={selectedWeekStart ?? ''}
         onClose={() => setSelectedWeekStart(null)}
-        onDataChanged={onDataChanged}
       />
     </Box>
   );
