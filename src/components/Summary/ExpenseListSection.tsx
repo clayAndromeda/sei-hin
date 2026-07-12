@@ -59,12 +59,13 @@ export function ExpenseListSection({
     .filter((e) => !specialOnly || e.isSpecial);
 
   const filteredTotal = visibleExpenses.reduce((sum, e) => sum + e.amount, 0);
+  const allTotal = expenses.reduce((sum, e) => sum + e.amount, 0);
   const grouped = groupByDate(visibleExpenses);
 
   return (
     <SectionCard
       title="支出一覧"
-      summary={`${expenses.length}件`}
+      summary={`${expenses.length}件・${formatCurrency(allTotal)}`}
       storageKey={storageKey}
     >
         {/* カテゴリフィルタ */}
@@ -107,11 +108,27 @@ export function ExpenseListSection({
             onClick={() => setSpecialOnly(!specialOnly)}
             sx={{ fontSize: '0.7rem', height: 22 }}
           />
-          {(categoryFilter !== 'all' || specialOnly) && (
-            <Typography variant="caption" color="text.secondary" sx={{ ml: 'auto' }}>
-              {visibleExpenses.length}件・{formatCurrency(filteredTotal)}
-            </Typography>
-          )}
+        </Box>
+        {/* 表示中の合計金額（フィルタ適用中はその絞り込み結果の合計） */}
+        <Box
+          sx={{
+            mx: 2,
+            mb: 1,
+            px: 1.5,
+            py: 0.75,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'baseline',
+            backgroundColor: 'action.hover',
+            borderRadius: 1,
+          }}
+        >
+          <Typography variant="body2" color="text.secondary">
+            {categoryFilter !== 'all' || specialOnly ? '絞り込み合計' : '合計'}（{visibleExpenses.length}件）
+          </Typography>
+          <Typography variant="subtitle1" fontWeight="bold" color="primary.main">
+            {formatCurrency(filteredTotal)}
+          </Typography>
         </Box>
         {visibleExpenses.length === 0 ? (
           <Typography

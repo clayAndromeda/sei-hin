@@ -167,11 +167,13 @@ export function ExpenseDialog({
   };
 
   // 日付表示用: "YYYY-MM-DD" → "YYYY年M月D日（曜）"
+  // スマホでは閉じる・◀▶ボタンと同じ行に収まるよう年を省略する
   const displayDate = date
     ? (() => {
         const d = new Date(date + 'T00:00:00');
         const weekday = WEEKDAY_LABELS[(d.getDay() + 6) % 7];
-        return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日（${weekday}）`;
+        const base = `${d.getMonth() + 1}月${d.getDate()}日（${weekday}）`;
+        return fullScreen ? base : `${d.getFullYear()}年${base}`;
       })()
     : '';
 
@@ -186,44 +188,54 @@ export function ExpenseDialog({
       maxWidth="sm"
       fullScreen={fullScreen}
     >
+      {/* 閉じるボタンは左端、日付切り替え◀▶はタイトルに隣接して中央に寄せる。
+          ◀を閉じるボタンの隣に置くと誤操作しやすいため、間に余白を確保する */}
       <DialogTitle
         sx={{
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'space-between',
           gap: 1,
+          fontSize: { xs: '1.05rem', sm: '1.25rem' },
         }}
       >
-        <IconButton onClick={onClose} size="small" aria-label="閉じる" sx={{ mr: 0.5 }}>
+        <IconButton onClick={onClose} size="small" aria-label="閉じる" sx={{ flexShrink: 0 }}>
           <CloseIcon />
         </IconButton>
-        {onNavigateDate && (
-          <IconButton
-            onClick={() => handleNavigateDate(-1)}
-            size="small"
-            aria-label="前の日へ"
-          >
-            <ChevronLeftIcon />
-          </IconButton>
-        )}
         <Box
-          component="span"
           sx={{
             flexGrow: 1,
-            textAlign: onNavigateDate ? 'center' : 'left',
-            whiteSpace: 'nowrap',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: onNavigateDate ? 'center' : 'flex-start',
+            gap: 0.5,
+            minWidth: 0,
           }}
         >
-          {displayDate}の記録
+          {onNavigateDate && (
+            <IconButton
+              onClick={() => handleNavigateDate(-1)}
+              size="small"
+              aria-label="前の日へ"
+            >
+              <ChevronLeftIcon />
+            </IconButton>
+          )}
+          <Box component="span" sx={{ whiteSpace: 'nowrap' }}>
+            {displayDate}の記録
+          </Box>
+          {onNavigateDate && (
+            <IconButton
+              onClick={() => handleNavigateDate(1)}
+              size="small"
+              aria-label="次の日へ"
+            >
+              <ChevronRightIcon />
+            </IconButton>
+          )}
         </Box>
+        {/* 閉じるボタンと同じ幅のスペーサーでタイトルを画面中央に保つ（幅に余裕のあるsm以上のみ） */}
         {onNavigateDate && (
-          <IconButton
-            onClick={() => handleNavigateDate(1)}
-            size="small"
-            aria-label="次の日へ"
-          >
-            <ChevronRightIcon />
-          </IconButton>
+          <Box sx={{ width: 34, flexShrink: 0, display: { xs: 'none', sm: 'block' } }} />
         )}
       </DialogTitle>
       <DialogContent>

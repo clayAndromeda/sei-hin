@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, IconButton, Typography, Tooltip, useMediaQuery, useTheme, Paper, Divider, List, ListItem, ListItemText, FormControlLabel, Switch } from '@mui/material';
+import { Box, IconButton, Typography, Tooltip, useMediaQuery, useTheme, Paper, Divider, FormControlLabel, Switch } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
@@ -190,7 +190,7 @@ export function CalendarView() {
               </Typography>
             </Box>
 
-            {/* カテゴリ別ドーナツチャート */}
+            {/* カテゴリ別ドーナツチャート（凡例にラベル・金額・割合を含む） */}
             {categoryTotals.size > 0 && (
               <>
                 <Divider sx={{ my: 2 }} />
@@ -199,31 +199,6 @@ export function CalendarView() {
                 </Typography>
                 <CategoryDonutChart categoryTotals={categoryTotals} total={monthTotal} />
               </>
-            )}
-
-            {/* カテゴリ別リスト */}
-            {categoryTotals.size > 0 && (
-              <List dense sx={{ mt: 1 }}>
-                {Array.from(categoryTotals.entries())
-                  .sort((a, b) => b[1] - a[1])
-                  .slice(0, 5)
-                  .map(([category, amount]) => {
-                    const percentage = monthTotal > 0 ? Math.round((amount / monthTotal) * 100) : 0;
-                    return (
-                      <ListItem key={category} sx={{ px: 0 }}>
-                        <ListItemText
-                          primary={category}
-                          secondary={`${percentage}%`}
-                          primaryTypographyProps={{ variant: 'body2' }}
-                          secondaryTypographyProps={{ variant: 'caption' }}
-                        />
-                        <Typography variant="body2" fontWeight="medium">
-                          {formatCurrency(amount)}
-                        </Typography>
-                      </ListItem>
-                    );
-                  })}
-              </List>
             )}
           </Paper>
         </Box>
