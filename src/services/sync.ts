@@ -5,6 +5,7 @@ import type {
   SeihinData,
   WeekBudget,
   DefaultWeekBudgetSync,
+  DefaultMonthBudgetSync,
   FixedCostItem,
   FixedCostAmountChange,
 } from '../types';
@@ -57,20 +58,39 @@ export function mergeWeekBudgets(
   return Array.from(merged.values());
 }
 
-// デフォルト週予算のマージ（updatedAtが新しい方を採用）
-export function mergeDefaultWeekBudget(
-  local: DefaultWeekBudgetSync | null,
-  remote: DefaultWeekBudgetSync | null,
-): DefaultWeekBudgetSync | null {
+// updatedAt比較で新しい方を採用する単一レコードのマージ
+function mergeByUpdatedAt<T extends { updatedAt: string }>(
+  local: T | null,
+  remote: T | null,
+): T | null {
   if (!local) return remote;
   if (!remote) return local;
   return remote.updatedAt > local.updatedAt ? remote : local;
 }
 
-// ローカルのdefaultWeekBudgetをmetadataから取得
-async function getLocalDefaultWeekBudget(): Promise<DefaultWeekBudgetSync | null> {
-  const budgetMeta = await db.metadata.get('defaultWeekBudget');
-  const updatedAtMeta = await db.metadata.get('defaultWeekBudgetUpdatedAt');
+// デフォルト週予算のマージ（updatedAtが新しい方を採用）
+export function mergeDefaultWeekBudget(
+  local: DefaultWeekBudgetSync | null,
+  remote: DefaultWeekBudgetSync | null,
+): DefaultWeekBudgetSync | null {
+  return mergeByUpdatedAt(local, remote);
+}
+
+// デフォルト月予算のマージ（updatedAtが新しい方を採用）
+export function mergeDefaultMonthBudget(
+  local: DefaultMonthBudgetSync | null,
+  remote: DefaultMonthBudgetSync | null,
+): DefaultMonthBudgetSync | null {
+  return mergeByUpdatedAt(local, remote);
+}
+
+// metadataに保存された予算（値 + updatedAtの2キー）を取得
+async function getLocalBudgetMeta(
+  budgetKey: string,
+  updatedAtKey: string,
+): Promise<{ budget: number; updatedAt: string } | null> {
+  const budgetMeta = await db.metadata.get(budgetKey);
+  const updatedAtMeta = await db.metadata.get(updatedAtKey);
 
   if (!budgetMeta) return null;
   const budget = parseInt(budgetMeta.value, 10);
@@ -82,10 +102,26 @@ async function getLocalDefaultWeekBudget(): Promise<DefaultWeekBudgetSync | null
   };
 }
 
+// ローカルのdefaultWeekBudgetをmetadataから取得
+async function getLocalDefaultWeekBudget(): Promise<DefaultWeekBudgetSync | null> {
+  return getLocalBudgetMeta('defaultWeekBudget', 'defaultWeekBudgetUpdatedAt');
+}
+
+// ローカルのdefaultMonthBudgetをmetadataから取得
+async function getLocalDefaultMonthBudget(): Promise<DefaultMonthBudgetSync | null> {
+  return getLocalBudgetMeta('defaultMonthBudget', 'defaultMonthBudgetUpdatedAt');
+}
+
 // マージ済みdefaultWeekBudgetをmetadataに保存
 async function saveLocalDefaultWeekBudget(data: DefaultWeekBudgetSync): Promise<void> {
   await db.metadata.put({ key: 'defaultWeekBudget', value: String(data.budget) });
   await db.metadata.put({ key: 'defaultWeekBudgetUpdatedAt', value: data.updatedAt });
+}
+
+// マージ済みdefaultMonthBudgetをmetadataに保存
+async function saveLocalDefaultMonthBudget(data: DefaultMonthBudgetSync): Promise<void> {
+  await db.metadata.put({ key: 'defaultMonthBudget', value: String(data.budget) });
+  await db.metadata.put({ key: 'defaultMonthBudgetUpdatedAt', value: data.updatedAt });
 }
 
 // リモートデータからweekBudgetsを安全に取り出す（後方互換）
@@ -153,6 +189,7 @@ export async function performSync(): Promise<void> {
     const localExpenses = await db.expenses.toArray();
     const localWeekBudgets = await db.weekBudgets.toArray();
     const localDefaultWB = await getLocalDefaultWeekBudget();
+    const localDefaultMB = await getLocalDefaultMonthBudget();
     const localFixedCostItems = await db.fixedCostItems.toArray();
     const localFixedCostChanges = await db.fixedCostAmountChanges.toArray();
 
@@ -162,6 +199,7 @@ export async function performSync(): Promise<void> {
     let mergedExpenses: Expense[];
     let mergedWeekBudgets: WeekBudget[];
     let mergedDefaultWB: DefaultWeekBudgetSync | null;
+    let mergedDefaultMB: DefaultMonthBudgetSync | null;
     let mergedFixedCostItems: FixedCostItem[];
     let mergedFixedCostChanges: FixedCostAmountChange[];
     let rev: string | undefined;
@@ -175,6 +213,7 @@ export async function performSync(): Promise<void> {
       }));
       const remoteWeekBudgets = extractRemoteWeekBudgets(downloaded.data);
       const remoteDefaultWB = downloaded.data.defaultWeekBudget ?? null;
+      const remoteDefaultMB = downloaded.data.defaultMonthBudget ?? null;
       const remoteFixedCostItems = downloaded.data.fixedCostItems ?? [];
       const remoteFixedCostChanges = downloaded.data.fixedCostAmountChanges ?? [];
 
@@ -182,6 +221,7 @@ export async function performSync(): Promise<void> {
       mergedExpenses = mergeExpenses(localExpenses, remoteExpenses);
       mergedWeekBudgets = mergeWeekBudgets(localWeekBudgets, remoteWeekBudgets);
       mergedDefaultWB = mergeDefaultWeekBudget(localDefaultWB, remoteDefaultWB);
+      mergedDefaultMB = mergeDefaultMonthBudget(localDefaultMB, remoteDefaultMB);
       mergedFixedCostItems = mergeFixedCostItems(
         localFixedCostItems,
         remoteFixedCostItems,
@@ -196,6 +236,7 @@ export async function performSync(): Promise<void> {
       mergedExpenses = localExpenses;
       mergedWeekBudgets = localWeekBudgets;
       mergedDefaultWB = localDefaultWB;
+      mergedDefaultMB = localDefaultMB;
       mergedFixedCostItems = localFixedCostItems;
       mergedFixedCostChanges = localFixedCostChanges;
     }
@@ -221,16 +262,20 @@ export async function performSync(): Promise<void> {
     if (mergedDefaultWB) {
       await saveLocalDefaultWeekBudget(mergedDefaultWB);
     }
+    if (mergedDefaultMB) {
+      await saveLocalDefaultMonthBudget(mergedDefaultMB);
+    }
 
     // 5. Dropboxにアップロード
     const dataToUpload: SeihinData = {
-      version: 4,
+      version: 5,
       updatedAt: new Date().toISOString(),
       expenses: mergedExpenses,
       weekBudgets: mergedWeekBudgets,
       defaultWeekBudget: mergedDefaultWB ?? undefined,
       fixedCostItems: mergedFixedCostItems,
       fixedCostAmountChanges: mergedFixedCostChanges,
+      defaultMonthBudget: mergedDefaultMB ?? undefined,
     };
 
     try {
@@ -247,12 +292,14 @@ export async function performSync(): Promise<void> {
           }));
           const retryRemoteWB = extractRemoteWeekBudgets(retryDownload.data);
           const retryRemoteDefaultWB = retryDownload.data.defaultWeekBudget ?? null;
+          const retryRemoteDefaultMB = retryDownload.data.defaultMonthBudget ?? null;
           const retryRemoteFCI = retryDownload.data.fixedCostItems ?? [];
           const retryRemoteFCC = retryDownload.data.fixedCostAmountChanges ?? [];
 
           const retryMergedExpenses = mergeExpenses(mergedExpenses, retryRemote);
           const retryMergedWB = mergeWeekBudgets(mergedWeekBudgets, retryRemoteWB);
           const retryMergedDefaultWB = mergeDefaultWeekBudget(mergedDefaultWB, retryRemoteDefaultWB);
+          const retryMergedDefaultMB = mergeDefaultMonthBudget(mergedDefaultMB, retryRemoteDefaultMB);
           const retryMergedFCI = mergeFixedCostItems(
             mergedFixedCostItems,
             retryRemoteFCI,
@@ -282,15 +329,19 @@ export async function performSync(): Promise<void> {
           if (retryMergedDefaultWB) {
             await saveLocalDefaultWeekBudget(retryMergedDefaultWB);
           }
+          if (retryMergedDefaultMB) {
+            await saveLocalDefaultMonthBudget(retryMergedDefaultMB);
+          }
 
           const retryData: SeihinData = {
-            version: 4,
+            version: 5,
             updatedAt: new Date().toISOString(),
             expenses: retryMergedExpenses,
             weekBudgets: retryMergedWB,
             defaultWeekBudget: retryMergedDefaultWB ?? undefined,
             fixedCostItems: retryMergedFCI,
             fixedCostAmountChanges: retryMergedFCC,
+            defaultMonthBudget: retryMergedDefaultMB ?? undefined,
           };
           await uploadFile(retryData, retryDownload.rev);
         }
