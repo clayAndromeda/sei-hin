@@ -18,15 +18,22 @@ export interface DefaultWeekBudgetSync {
   updatedAt: string; // ISO 8601 datetime
 }
 
+// デフォルト月予算（固定費+変動費を合わせた月全体の予算）の同期用データ
+export interface DefaultMonthBudgetSync {
+  budget: number;
+  updatedAt: string; // ISO 8601 datetime
+}
+
 // Dropboxに保存するデータ全体
 export interface SeihinData {
-  version: 1 | 2 | 3 | 4;
+  version: 1 | 2 | 3 | 4 | 5;
   updatedAt: string; // ISO 8601 datetime
   expenses: Expense[];
   weekBudgets?: WeekBudget[]; // v3で追加（後方互換のためoptional）
   defaultWeekBudget?: DefaultWeekBudgetSync; // v3で追加（後方互換のためoptional）
   fixedCostItems?: FixedCostItem[]; // v4で追加（後方互換のためoptional）
   fixedCostAmountChanges?: FixedCostAmountChange[]; // v4で追加（後方互換のためoptional）
+  defaultMonthBudget?: DefaultMonthBudgetSync; // v5で追加（後方互換のためoptional）
 }
 
 // メタデータ（IndexedDB用）

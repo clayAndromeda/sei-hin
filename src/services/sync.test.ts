@@ -3,6 +3,7 @@ import {
   mergeExpenses,
   mergeWeekBudgets,
   mergeDefaultWeekBudget,
+  mergeDefaultMonthBudget,
   mergeFixedCostItems,
   mergeFixedCostAmountChanges,
 } from './sync';
@@ -10,6 +11,7 @@ import type {
   Expense,
   WeekBudget,
   DefaultWeekBudgetSync,
+  DefaultMonthBudgetSync,
   FixedCostItem,
   FixedCostAmountChange,
 } from '../types';
@@ -290,6 +292,46 @@ describe('mergeDefaultWeekBudget', () => {
     const remote: DefaultWeekBudgetSync = { budget: 8000, updatedAt: '2026-02-16T10:00:00Z' };
     const result = mergeDefaultWeekBudget(local, remote);
     expect(result?.budget).toBe(5000);
+  });
+});
+
+describe('mergeDefaultMonthBudget', () => {
+  it('両方nullの場合、nullを返す', () => {
+    const result = mergeDefaultMonthBudget(null, null);
+    expect(result).toBeNull();
+  });
+
+  it('ローカルのみの場合、ローカルを返す', () => {
+    const local: DefaultMonthBudgetSync = { budget: 150000, updatedAt: '2026-07-01T10:00:00Z' };
+    const result = mergeDefaultMonthBudget(local, null);
+    expect(result).toEqual(local);
+  });
+
+  it('リモートのみの場合、リモートを返す', () => {
+    const remote: DefaultMonthBudgetSync = { budget: 180000, updatedAt: '2026-07-01T10:00:00Z' };
+    const result = mergeDefaultMonthBudget(null, remote);
+    expect(result).toEqual(remote);
+  });
+
+  it('リモートが新しい場合、リモートを採用する', () => {
+    const local: DefaultMonthBudgetSync = { budget: 150000, updatedAt: '2026-07-01T10:00:00Z' };
+    const remote: DefaultMonthBudgetSync = { budget: 180000, updatedAt: '2026-07-01T11:00:00Z' };
+    const result = mergeDefaultMonthBudget(local, remote);
+    expect(result?.budget).toBe(180000);
+  });
+
+  it('ローカルが新しい場合、ローカルを採用する', () => {
+    const local: DefaultMonthBudgetSync = { budget: 150000, updatedAt: '2026-07-01T12:00:00Z' };
+    const remote: DefaultMonthBudgetSync = { budget: 180000, updatedAt: '2026-07-01T11:00:00Z' };
+    const result = mergeDefaultMonthBudget(local, remote);
+    expect(result?.budget).toBe(150000);
+  });
+
+  it('updatedAtが同じ場合、ローカルを採用する', () => {
+    const local: DefaultMonthBudgetSync = { budget: 150000, updatedAt: '2026-07-01T10:00:00Z' };
+    const remote: DefaultMonthBudgetSync = { budget: 180000, updatedAt: '2026-07-01T10:00:00Z' };
+    const result = mergeDefaultMonthBudget(local, remote);
+    expect(result?.budget).toBe(150000);
   });
 });
 

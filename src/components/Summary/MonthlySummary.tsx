@@ -11,6 +11,7 @@ import {
   Chip,
   Paper,
   Stack,
+  LinearProgress,
 } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -19,6 +20,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import { useExpensesByMonth, useExpensesByDateRange } from '../../hooks/useExpenses';
 import { useMonthlyFixedCosts } from '../../hooks/useFixedCosts';
+import { useDefaultMonthBudget } from '../../hooks/useMonthBudget';
 import { formatCurrency } from '../../utils/format';
 import { toDateString } from '../../utils/date';
 import {
@@ -78,6 +80,17 @@ export function MonthlySummary() {
   const specialTotal = expenses
     .filter((e) => e.isSpecial)
     .reduce((sum, e) => sum + e.amount, 0);
+
+  // 月予算（固定費+変動費）との比較
+  // 特別な支出（isSpecial）は予算から除外する
+  const monthBudget = useDefaultMonthBudget();
+  const budgetSpent = monthTotal - specialTotal + fixedCostTotal;
+  const isOverBudget = monthBudget !== null && budgetSpent > monthBudget;
+  const budgetRemaining = monthBudget !== null ? monthBudget - budgetSpent : 0;
+  const budgetProgress =
+    monthBudget !== null && monthBudget > 0
+      ? Math.min((budgetSpent / monthBudget) * 100, 100)
+      : 0;
 
   // 前月の合計
   const prevMonthTotal = prevMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
@@ -182,7 +195,13 @@ export function MonthlySummary() {
       </Box>
 
       {/* 支出サマリーカード（総支出＝変動費＋固定費を一目で把握できるようにする） */}
-      <Paper variant="outlined" sx={{ p: 2 }}>
+      <Paper
+        variant="outlined"
+        sx={{
+          p: 2,
+          ...(isOverBudget && { borderColor: 'error.main' }),
+        }}
+      >
         <Typography variant="body2" color="text.secondary">
           総支出（変動費 + 固定費）
         </Typography>
@@ -208,6 +227,35 @@ export function MonthlySummary() {
             </Typography>
           </Box>
         </Box>
+
+        {/* 月予算の消化状況（進捗バー、特別な支出は除く） */}
+        {monthBudget !== null && (
+          <Box sx={{ mt: 1.5 }}>
+            <LinearProgress
+              variant="determinate"
+              value={budgetProgress}
+              color={isOverBudget ? 'error' : 'primary'}
+              sx={{ height: 8, borderRadius: 4 }}
+            />
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+              <Typography
+                variant="body2"
+                sx={{
+                  color: isOverBudget ? 'error.main' : 'text.secondary',
+                  fontWeight: isOverBudget ? 'bold' : 'normal',
+                }}
+              >
+                {isOverBudget
+                  ? `予算超過: ${formatCurrency(Math.abs(budgetRemaining))}`
+                  : `予算まであと${formatCurrency(budgetRemaining)}`}
+              </Typography>
+              <Typography variant="caption" color="text.secondary">
+                月予算 {formatCurrency(monthBudget)}
+              </Typography>
+            </Box>
+          </Box>
+        )}
+
         <Divider sx={{ my: 1.5 }} />
         <Typography variant="body2" color="text.secondary">
           1日平均（変動費）: {formatCurrency(dailyAverage)}

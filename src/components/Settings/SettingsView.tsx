@@ -26,6 +26,7 @@ import { getAuthUrl, disconnect } from '../../services/dropbox';
 import { db } from '../../services/db';
 import { markDataChanged } from '../../services/syncScheduler';
 import { useDefaultWeekBudget, setDefaultWeekBudget } from '../../hooks/useWeekBudget';
+import { useDefaultMonthBudget, setDefaultMonthBudget } from '../../hooks/useMonthBudget';
 import { formatCurrency } from '../../utils/format';
 import type { SeihinData } from '../../types';
 
@@ -50,6 +51,9 @@ export function SettingsView({
   const defaultWeekBudget = useDefaultWeekBudget();
   const [budgetInput, setBudgetInput] = useState<string>('');
   const [budgetError, setBudgetError] = useState<string | null>(null);
+  const defaultMonthBudget = useDefaultMonthBudget();
+  const [monthBudgetInput, setMonthBudgetInput] = useState<string>('');
+  const [monthBudgetError, setMonthBudgetError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importPreview, setImportPreview] = useState<SeihinData | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -87,6 +91,23 @@ export function SettingsView({
       setBudgetInput('');
     } catch (error) {
       setBudgetError(
+        error instanceof Error ? error.message : '保存に失敗しました',
+      );
+    }
+  };
+
+  const handleSaveMonthBudget = async () => {
+    const value = parseInt(monthBudgetInput, 10);
+    if (isNaN(value) || value < 0) {
+      setMonthBudgetError('正の整数を入力してください');
+      return;
+    }
+    try {
+      setMonthBudgetError(null);
+      await setDefaultMonthBudget(value);
+      setMonthBudgetInput('');
+    } catch (error) {
+      setMonthBudgetError(
         error instanceof Error ? error.message : '保存に失敗しました',
       );
     }
@@ -167,7 +188,21 @@ export function SettingsView({
           if (importPreview.defaultWeekBudget) {
             await db.metadata.put({
               key: 'defaultWeekBudget',
-              value: JSON.stringify(importPreview.defaultWeekBudget),
+              value: String(importPreview.defaultWeekBudget.budget),
+            });
+            await db.metadata.put({
+              key: 'defaultWeekBudgetUpdatedAt',
+              value: importPreview.defaultWeekBudget.updatedAt,
+            });
+          }
+          if (importPreview.defaultMonthBudget) {
+            await db.metadata.put({
+              key: 'defaultMonthBudget',
+              value: String(importPreview.defaultMonthBudget.budget),
+            });
+            await db.metadata.put({
+              key: 'defaultMonthBudgetUpdatedAt',
+              value: importPreview.defaultMonthBudget.updatedAt,
             });
           }
         },
@@ -327,6 +362,47 @@ export function SettingsView({
 
       <Divider sx={{ my: 2 }} />
 
+      {/* 月予算設定（固定費+変動費を合わせた月全体の予算） */}
+      <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
+        月予算設定
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        固定費と変動費を合わせた月全体の予算です。月間サマリーで消化状況が表示されます。
+      </Typography>
+      <List dense>
+        <ListItem>
+          <ListItemText
+            primary={`月予算: ${defaultMonthBudget !== null ? formatCurrency(defaultMonthBudget) : '未設定'}`}
+          />
+        </ListItem>
+      </List>
+      <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
+        <TextField
+          size="small"
+          label="月予算（円）"
+          type="number"
+          value={monthBudgetInput}
+          onChange={(e) => setMonthBudgetInput(e.target.value)}
+          inputProps={{ min: 0, step: 1 }}
+          sx={{ flexGrow: 1 }}
+        />
+        <Button
+          variant="outlined"
+          size="small"
+          onClick={handleSaveMonthBudget}
+          sx={{ mt: 0.5 }}
+        >
+          保存
+        </Button>
+      </Box>
+      {monthBudgetError && (
+        <Alert severity="error" sx={{ mt: 1 }}>
+          {monthBudgetError}
+        </Alert>
+      )}
+
+      <Divider sx={{ my: 2 }} />
+
       {/* データエクスポート / インポート */}
       <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
         データエクスポート / インポート
@@ -390,6 +466,9 @@ export function SettingsView({
               )}
               {importPreview?.defaultWeekBudget && (
                 <li>デフォルト週予算: あり</li>
+              )}
+              {importPreview?.defaultMonthBudget && (
+                <li>デフォルト月予算: あり</li>
               )}
             </Box>
           </DialogContentText>

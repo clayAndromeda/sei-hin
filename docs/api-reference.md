@@ -40,9 +40,15 @@
 - `setWeekBudget(weekStartDate, budget)`: 週予算を個別設定（updatedAt付与）
 - `deleteWeekBudget(weekStartDate)`: 論理削除（デフォルトに戻す）
 
+## hooks/useMonthBudget.ts
+
+- `useDefaultMonthBudget()`: デフォルト月予算（固定費+変動費）をリアクティブ取得
+- `setDefaultMonthBudget(budget)`: デフォルト月予算を設定（updatedAt保存）
+
 ## services/sync.ts
 
-- `performSync()`: 同期実行（expenses + weekBudgets + defaultWeekBudget、排他制御あり）
+- `performSync()`: 同期実行（expenses + weekBudgets + defaultWeekBudget + defaultMonthBudget + 固定費、排他制御あり）
 - `mergeExpenses(local, remote)`: expensesマージロジック（ID基準、updatedAt比較）
 - `mergeWeekBudgets(local, remote)`: weekBudgetsマージロジック（weekStart基準、updatedAt比較）
 - `mergeDefaultWeekBudget(local, remote)`: defaultWeekBudgetマージ（updatedAt比較）
+- `mergeDefaultMonthBudget(local, remote)`: defaultMonthBudgetマージ（updatedAt比較）
