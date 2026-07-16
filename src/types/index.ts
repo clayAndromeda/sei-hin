@@ -8,7 +8,7 @@ export interface Expense {
   createdAt: string; // ISO 8601 datetime
   updatedAt: string; // ISO 8601 datetime
   deleted?: boolean; // 削除フラグ（同期用）
-  isSpecial?: boolean; // 特別な支出フラグ（予算外の支出）
+  isSpecial?: boolean; // 特別な支出フラグ（カレンダーで表示から除外できる）
   subcategory?: string; // サブカテゴリID（現状は食費のみ。'snack' | 'eating_out'）
 }
 

@@ -40,7 +40,7 @@ npm run test:watch # テストをウォッチモードで実行
 - **金額**: 整数（円）
 - **カレンダー**: 月曜始まり、日本語ロケール
 - **カテゴリ**: `'food' | 'transport' | 'entertainment' | 'books' | 'other'`
-- **特別な支出**: `isSpecial: true`で予算外としてマーク（予算計算から除外）
+- **特別な支出**: `isSpecial: true`でマーク（予算計算には含まれる。カレンダービューの「特別な支出を除く」トグルで表示から除外できる）
 
 ## デプロイ設定
 
@@ -55,7 +55,7 @@ npm run test:watch # テストをウォッチモードで実行
 - **金額表示**: `utils/format.ts`の`formatCurrency()`使用
 - **リアクティブクエリ**: DB変更時は自動でUIが更新される（`useLiveQuery`）
 - **同期タイミング**: 起動時 + CRUD操作後30秒デバウンス + タブ非表示時に未同期分を即時同期。データ層の変更系関数が`services/syncScheduler.ts`の`markDataChanged()`を呼ぶことでスケジュールされる
-- **予算計算**: `isSpecial: true`の支出は予算から除外される
+- **予算計算**: `isSpecial: true`の支出も予算に含まれる（除外しない）
 - **テスト**: テストファイルはソースと同じディレクトリに `*.test.ts` で配置。`npm test` で全テスト実行
 
 ## 詳細ドキュメント
