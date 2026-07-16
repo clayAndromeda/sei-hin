@@ -81,10 +81,9 @@ export function MonthlySummary() {
     .filter((e) => e.isSpecial)
     .reduce((sum, e) => sum + e.amount, 0);
 
-  // 月予算（固定費+変動費）との比較
-  // 特別な支出（isSpecial）は予算から除外する
+  // 月予算（固定費+変動費）との比較（特別な支出も含める）
   const monthBudget = useDefaultMonthBudget();
-  const budgetSpent = monthTotal - specialTotal + fixedCostTotal;
+  const budgetSpent = monthTotal + fixedCostTotal;
   const isOverBudget = monthBudget !== null && budgetSpent > monthBudget;
   const budgetRemaining = monthBudget !== null ? monthBudget - budgetSpent : 0;
   const budgetProgress =
@@ -228,7 +227,7 @@ export function MonthlySummary() {
           </Box>
         </Box>
 
-        {/* 月予算の消化状況（進捗バー、特別な支出は除く） */}
+        {/* 月予算の消化状況（進捗バー） */}
         {monthBudget !== null && (
           <Box sx={{ mt: 1.5 }}>
             <LinearProgress

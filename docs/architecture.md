@@ -40,7 +40,7 @@
 - **v1**: 初期（expenses, metadata）
 - **v2**: categoryフィールド追加
 - **v3**: weekBudgetsテーブル追加
-- **v4**: isSpecialフィールド追加（予算外支出フラグ）
+- **v4**: isSpecialフィールド追加（特別な支出フラグ）
 - **v5**: WeekBudgetにupdatedAt, deletedフィールド追加（Dropbox同期対応）
 
 ## UI構成

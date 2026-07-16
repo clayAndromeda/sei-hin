@@ -290,7 +290,7 @@ export function ExpenseDialog({
               size="small"
             />
           }
-          label="特別な支出として登録する（予算から除外できる）"
+          label="特別な支出として登録する（カレンダーで表示から除外できる）"
           sx={{ mb: 1 }}
         />
 
