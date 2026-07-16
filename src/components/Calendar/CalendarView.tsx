@@ -36,6 +36,11 @@ export function CalendarView() {
     ? allExpenses.filter(e => !e.isSpecial)
     : allExpenses;
 
+  // 特別な支出がある日付（除外モードでもマーカーを表示するためフィルタ前の全支出から算出）
+  const specialDates = new Set(
+    allExpenses.filter(e => e.isSpecial).map(e => e.date),
+  );
+
   // 月合計・カテゴリ集計は当月分のみ
   const monthStartStr = `${year}-${String(month + 1).padStart(2, '0')}-01`;
   const monthEndStr = `${year}-${String(month + 1).padStart(2, '0')}-31`;
@@ -162,6 +167,7 @@ export function CalendarView() {
           year={year}
           month={month}
           expenses={filteredExpenses}
+          specialDates={specialDates}
           onDateClick={(dateStr) => setSelectedDate(dateStr)}
           onWeekBudgetClick={(weekStart) => setSelectedWeekStart(weekStart)}
         />
