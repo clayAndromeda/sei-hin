@@ -12,6 +12,8 @@ import {
   Paper,
   Stack,
   LinearProgress,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -33,10 +35,13 @@ import {
   aggregateFoodBySubcategory,
   buildCategoryComparison,
   buildFoodSubcategoryMonthlyTrend,
+  buildMonthlyCategoryTrend,
 } from '../../utils/chart';
 import { FOOD_SUBCATEGORIES } from '../../constants/foodSubcategories';
+import { usePersistedState } from '../../hooks/usePersistedState';
 import { CategoryDonutChart } from './CategoryDonutChart';
 import { FoodFrequencyTrendChart } from './FoodFrequencyTrendChart';
+import { PeriodTrendChart } from './PeriodTrendChart';
 import { ExpenseListSection } from './ExpenseListSection';
 import { FixedCostItemDialog } from './FixedCostItemDialog';
 import { SectionCard } from './SectionCard';
@@ -44,6 +49,9 @@ import { ExpenseDialog } from '../ExpenseDialog/ExpenseDialog';
 import type { Expense, FixedCostItem } from '../../types';
 
 const FREQUENCY_TREND_MONTHS = 6;
+
+// 支出推移の表示期間の選択肢（ヶ月）
+const SPENDING_TREND_MONTH_OPTIONS = [3, 6, 12];
 
 export function MonthlySummary() {
   const today = new Date();
@@ -127,6 +135,32 @@ export function MonthlySummary() {
   const hasFrequencyData = foodFrequencyTrend.some((m) =>
     FOOD_SUBCATEGORIES.some((sub) => m.counts[sub.id] > 0),
   );
+
+  // 支出の推移（表示中の月を含む直近Nヶ月のカテゴリ別比較）
+  const [spendingTrendMonths, setSpendingTrendMonths] = usePersistedState(
+    'summary.month.trendMonths',
+    6,
+  );
+  const spendingTrendStart = new Date(year, month - (spendingTrendMonths - 1), 1);
+  const spendingTrendExpenses = useExpensesByDateRange(
+    toDateString(spendingTrendStart),
+    toDateString(trendRangeEnd),
+  );
+  const spendingTrend = buildMonthlyCategoryTrend(
+    spendingTrendExpenses,
+    year,
+    month,
+    spendingTrendMonths,
+  );
+  const hasSpendingTrend = spendingTrend.some((m) => m.total > 0);
+  // 記録のある月だけで平均を出す（記録開始前の月で平均が下がるのを防ぐ）
+  const recordedMonths = spendingTrend.filter((m) => m.total > 0);
+  const spendingTrendAverage =
+    recordedMonths.length > 0
+      ? Math.floor(
+          recordedMonths.reduce((sum, m) => sum + m.total, 0) / recordedMonths.length,
+        )
+      : 0;
 
   // 1日平均の前月比: 期間を揃えて比較する（MTD同士）
   // 当月進行中の場合、前月も同じ日数分のみを対象にする（例: 今日が4/5なら3/1〜3/5のみ）。
@@ -386,6 +420,41 @@ export function MonthlySummary() {
                 })}
               </Box>
             </Box>
+        </SectionCard>
+      )}
+
+      {/* 支出の推移（複数月のカテゴリ別比較） */}
+      {hasSpendingTrend && (
+        <SectionCard
+          title="支出の推移"
+          summary={`月平均 ${formatCurrency(spendingTrendAverage)}`}
+          storageKey="summary.month.spendingTrendOpen"
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'center', pt: 1.5 }}>
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              value={spendingTrendMonths}
+              onChange={(_, value) => {
+                if (value !== null) setSpendingTrendMonths(value);
+              }}
+            >
+              {SPENDING_TREND_MONTH_OPTIONS.map((count) => (
+                <ToggleButton key={count} value={count}>
+                  {count}ヶ月
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          </Box>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ display: 'block', px: 2, pt: 1 }}
+          >
+            直近{spendingTrendMonths}ヶ月の変動費・月平均 {formatCurrency(spendingTrendAverage)}
+            （記録のある月のみ）
+          </Typography>
+          <PeriodTrendChart data={spendingTrend} />
         </SectionCard>
       )}
 

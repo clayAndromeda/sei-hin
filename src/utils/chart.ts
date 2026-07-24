@@ -1,6 +1,7 @@
 import type { Expense } from '../types';
 import { CATEGORIES } from '../constants/categories';
 import { FOOD_SUBCATEGORIES } from '../constants/foodSubcategories';
+import { addDaysToDateString } from './date';
 
 // カテゴリ別集計
 export function aggregateByCategory(expenses: Expense[]) {
@@ -60,6 +61,71 @@ export function buildFoodSubcategoryMonthlyTrend(
       ).length;
     }
     result.push({ yearMonth: ym, label: `${m + 1}月`, counts });
+  }
+  return result;
+}
+
+// 期間（月・週）ごとのカテゴリ別支出合計
+export interface PeriodCategoryTotal {
+  key: string; // 月: "YYYY-MM"、週: 週開始日 "YYYY-MM-DD"
+  label: string; // 月: "2月"、週: "2/9"
+  totals: Record<string, number>; // カテゴリID -> 金額（0円のカテゴリは含まない）
+  total: number; // 期間の合計金額
+}
+
+// Map<string, number> を Record に変換（0円は除く）
+function categoryMapToRecord(totals: Map<string, number>): Record<string, number> {
+  const record: Record<string, number> = {};
+  for (const [id, amount] of totals) {
+    if (amount > 0) record[id] = amount;
+  }
+  return record;
+}
+
+// カテゴリ別支出の月次推移（endYear/endMonthを含む直近monthCountヶ月分、古い順）
+// expensesにはあらかじめ対象期間全体の支出を渡す
+export function buildMonthlyCategoryTrend(
+  expenses: Expense[],
+  endYear: number,
+  endMonth: number, // 0-indexed
+  monthCount: number,
+): PeriodCategoryTotal[] {
+  const result: PeriodCategoryTotal[] = [];
+  for (let i = monthCount - 1; i >= 0; i--) {
+    const d = new Date(endYear, endMonth - i, 1);
+    const ym = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const monthExpenses = expenses.filter((e) => e.date.startsWith(ym));
+    const totals = categoryMapToRecord(aggregateByCategory(monthExpenses));
+    result.push({
+      key: ym,
+      label: `${d.getMonth() + 1}月`,
+      totals,
+      total: monthExpenses.reduce((sum, e) => sum + e.amount, 0),
+    });
+  }
+  return result;
+}
+
+// カテゴリ別支出の週次推移（endWeekStartの週を含む直近weekCount週分、古い順）
+// endWeekStartは週開始日（月曜）の "YYYY-MM-DD" 文字列
+export function buildWeeklyCategoryTrend(
+  expenses: Expense[],
+  endWeekStart: string,
+  weekCount: number,
+): PeriodCategoryTotal[] {
+  const result: PeriodCategoryTotal[] = [];
+  for (let i = weekCount - 1; i >= 0; i--) {
+    const start = addDaysToDateString(endWeekStart, -7 * i);
+    const end = addDaysToDateString(start, 6);
+    const weekExpenses = expenses.filter((e) => e.date >= start && e.date <= end);
+    const totals = categoryMapToRecord(aggregateByCategory(weekExpenses));
+    const [, m, d] = start.split('-');
+    result.push({
+      key: start,
+      label: `${parseInt(m, 10)}/${parseInt(d, 10)}`,
+      totals,
+      total: weekExpenses.reduce((sum, e) => sum + e.amount, 0),
+    });
   }
   return result;
 }
