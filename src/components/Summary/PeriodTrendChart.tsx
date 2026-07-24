@@ -1,17 +1,8 @@
 import { Box, Typography } from '@mui/material';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { CATEGORIES } from '../../constants/categories';
-import { formatCurrency } from '../../utils/format';
+import { formatCurrency, formatAxisAmount } from '../../utils/format';
 import type { PeriodCategoryTotal } from '../../utils/chart';
-
-// Y軸の金額を「5万」「5,000」のように短く表示する
-function formatAxisAmount(value: number): string {
-  if (value >= 10000) {
-    const man = value / 10000;
-    return `${Number.isInteger(man) ? man : man.toFixed(1)}万`;
-  }
-  return value.toLocaleString();
-}
 
 interface PeriodTrendChartProps {
   data: PeriodCategoryTotal[];

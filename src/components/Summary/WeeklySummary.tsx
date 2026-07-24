@@ -20,6 +20,7 @@ import { useWeekBudget } from '../../hooks/useWeekBudget';
 import { formatCurrency } from '../../utils/format';
 import {
   aggregateByCategory,
+  aggregateFoodBySubcategory,
   aggregateFoodSubcategoryCount,
   buildWeeklyCategoryTrend,
 } from '../../utils/chart';
@@ -106,8 +107,9 @@ export function WeeklySummary() {
   // カテゴリ別集計
   const categoryTotals = aggregateByCategory(expenses);
 
-  // 外食・間食の回数
+  // 外食・間食の回数・金額
   const foodSubcategoryCounts = aggregateFoodSubcategoryCount(expenses);
+  const foodSubcategoryTotals = aggregateFoodBySubcategory(expenses);
   const hasFoodSubcategoryCounts = FOOD_SUBCATEGORIES.some(
     (sub) => (foodSubcategoryCounts.get(sub.id) ?? 0) > 0,
   );
@@ -258,8 +260,11 @@ export function WeeklySummary() {
         {hasFoodSubcategoryCounts && (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
             {FOOD_SUBCATEGORIES.map(
-              (sub) => `${sub.label} ${foodSubcategoryCounts.get(sub.id) ?? 0}回`,
-            ).join('・')}
+              (sub) =>
+                `${sub.label} ${foodSubcategoryCounts.get(sub.id) ?? 0}回・${formatCurrency(
+                  foodSubcategoryTotals.get(sub.id) ?? 0,
+                )}`,
+            ).join(' ／ ')}
           </Typography>
         )}
 
@@ -276,7 +281,11 @@ export function WeeklySummary() {
         storageKey="summary.week.categoryOpen"
         defaultOpen
       >
-        <CategoryDonutChart categoryTotals={categoryTotals} total={weekTotal} />
+        <CategoryDonutChart
+          categoryTotals={categoryTotals}
+          total={weekTotal}
+          foodSubcategoryTotals={foodSubcategoryTotals}
+        />
       </SectionCard>
 
       {/* 日別棒グラフ */}

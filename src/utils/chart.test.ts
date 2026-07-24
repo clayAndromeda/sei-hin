@@ -110,6 +110,7 @@ describe('buildFoodSubcategoryMonthlyTrend', () => {
     expect(result.map((m) => m.label)).toEqual(['12月', '1月', '2月']);
     for (const m of result) {
       expect(m.counts).toEqual({ snack: 0, eating_out: 0 });
+      expect(m.amounts).toEqual({ snack: 0, eating_out: 0 });
     }
   });
 
@@ -126,6 +127,21 @@ describe('buildFoodSubcategoryMonthlyTrend', () => {
     expect(dec.counts).toEqual({ snack: 0, eating_out: 1 });
     expect(jan.counts).toEqual({ snack: 2, eating_out: 0 });
     expect(feb.counts).toEqual({ snack: 0, eating_out: 1 });
+  });
+
+  it('各月の食費サブカテゴリ金額を正しく集計する', () => {
+    const expenses = [
+      createExpense({ id: '1', date: '2026-01-05', amount: 300, category: 'food', subcategory: 'snack' }),
+      createExpense({ id: '2', date: '2026-01-20', amount: 200, category: 'food', subcategory: 'snack' }),
+      createExpense({ id: '3', date: '2026-01-15', amount: 1200, category: 'food', subcategory: 'eating_out' }),
+      createExpense({ id: '4', date: '2026-02-01', amount: 800, category: 'food', subcategory: 'eating_out' }),
+      createExpense({ id: '5', date: '2026-01-10', amount: 999, category: 'transport', subcategory: 'snack' }), // 食費以外は無視
+      createExpense({ id: '6', date: '2026-01-11', amount: 999, category: 'food' }), // サブカテゴリなしは無視
+    ];
+    const result = buildFoodSubcategoryMonthlyTrend(expenses, 2026, 1, 2);
+    const [jan, feb] = result;
+    expect(jan.amounts).toEqual({ snack: 500, eating_out: 1200 });
+    expect(feb.amounts).toEqual({ snack: 0, eating_out: 800 });
   });
 });
 
