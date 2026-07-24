@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatCurrency } from './format';
+import { formatCurrency, formatAxisAmount } from './format';
 
 describe('formatCurrency', () => {
   it('金額を¥付きカンマ区切りでフォーマットする', () => {
@@ -23,5 +23,18 @@ describe('formatCurrency', () => {
     const result = formatCurrency(-1000);
     expect(result).toContain('1,000');
     expect(result).toContain('-');
+  });
+});
+
+describe('formatAxisAmount', () => {
+  it('1万以上は「万」表記にする', () => {
+    expect(formatAxisAmount(10000)).toBe('1万');
+    expect(formatAxisAmount(15000)).toBe('1.5万');
+    expect(formatAxisAmount(120000)).toBe('12万');
+  });
+
+  it('1万未満はカンマ区切りにする', () => {
+    expect(formatAxisAmount(5000)).toBe('5,000');
+    expect(formatAxisAmount(0)).toBe('0');
   });
 });

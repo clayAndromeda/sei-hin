@@ -33,21 +33,22 @@ export function aggregateFoodSubcategoryCount(expenses: Expense[]) {
   return counts;
 }
 
-export interface MonthlySubcategoryCount {
+export interface MonthlySubcategoryTrend {
   yearMonth: string; // "YYYY-MM"
   label: string; // "2月"
   counts: Record<string, number>; // サブカテゴリID -> 回数
+  amounts: Record<string, number>; // サブカテゴリID -> 金額
 }
 
-// 外食・間食の回数の月次推移（endYear/endMonthを含む直近monthCountヶ月分、古い順）
+// 外食・間食の回数・金額の月次推移（endYear/endMonthを含む直近monthCountヶ月分、古い順）
 // expensesにはあらかじめ対象期間全体の支出を渡す
 export function buildFoodSubcategoryMonthlyTrend(
   expenses: Expense[],
   endYear: number,
   endMonth: number, // 0-indexed
   monthCount: number,
-): MonthlySubcategoryCount[] {
-  const result: MonthlySubcategoryCount[] = [];
+): MonthlySubcategoryTrend[] {
+  const result: MonthlySubcategoryTrend[] = [];
   for (let i = monthCount - 1; i >= 0; i--) {
     const d = new Date(endYear, endMonth - i, 1);
     const y = d.getFullYear();
@@ -55,12 +56,15 @@ export function buildFoodSubcategoryMonthlyTrend(
     const ym = `${y}-${String(m + 1).padStart(2, '0')}`;
     const monthExpenses = expenses.filter((e) => e.date.startsWith(ym));
     const counts: Record<string, number> = {};
+    const amounts: Record<string, number> = {};
     for (const sub of FOOD_SUBCATEGORIES) {
-      counts[sub.id] = monthExpenses.filter(
+      const subExpenses = monthExpenses.filter(
         (e) => e.category === 'food' && e.subcategory === sub.id,
-      ).length;
+      );
+      counts[sub.id] = subExpenses.length;
+      amounts[sub.id] = subExpenses.reduce((sum, e) => sum + e.amount, 0);
     }
-    result.push({ yearMonth: ym, label: `${m + 1}月`, counts });
+    result.push({ yearMonth: ym, label: `${m + 1}月`, counts, amounts });
   }
   return result;
 }

@@ -40,7 +40,7 @@ import {
 import { FOOD_SUBCATEGORIES } from '../../constants/foodSubcategories';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { CategoryDonutChart } from './CategoryDonutChart';
-import { FoodFrequencyTrendChart } from './FoodFrequencyTrendChart';
+import { FoodFrequencyTrendChart, type FoodTrendMode } from './FoodFrequencyTrendChart';
 import { PeriodTrendChart } from './PeriodTrendChart';
 import { ExpenseListSection } from './ExpenseListSection';
 import { FixedCostItemDialog } from './FixedCostItemDialog';
@@ -118,7 +118,7 @@ export function MonthlySummary() {
   // 食費のサブカテゴリ別集計（間食の無駄遣いを把握するため）
   const foodSubcategoryTotals = aggregateFoodBySubcategory(expenses);
 
-  // 外食・間食の回数推移（直近6ヶ月、当月含む）
+  // 外食・間食の回数・金額推移（直近6ヶ月、当月含む）
   const trendRangeStart = new Date(year, month - (FREQUENCY_TREND_MONTHS - 1), 1);
   const trendRangeEnd = new Date(year, month + 1, 0);
   const trendExpenses = useExpensesByDateRange(
@@ -131,9 +131,23 @@ export function MonthlySummary() {
     month,
     FREQUENCY_TREND_MONTHS,
   );
-  const currentMonthFrequency = foodFrequencyTrend[foodFrequencyTrend.length - 1].counts;
+  const currentMonthFood = foodFrequencyTrend[foodFrequencyTrend.length - 1];
   const hasFrequencyData = foodFrequencyTrend.some((m) =>
     FOOD_SUBCATEGORIES.some((sub) => m.counts[sub.id] > 0),
+  );
+  // 推移グラフの表示モード（回数/金額）
+  const [foodTrendMode, setFoodTrendMode] = usePersistedState<FoodTrendMode>(
+    'summary.month.foodTrendMode',
+    'count',
+  );
+  // 当月の外食・間食の合計（セクションヘッダーの要約用）
+  const currentMonthFoodAmount = FOOD_SUBCATEGORIES.reduce(
+    (sum, sub) => sum + (currentMonthFood.amounts[sub.id] ?? 0),
+    0,
+  );
+  const currentMonthFoodCount = FOOD_SUBCATEGORIES.reduce(
+    (sum, sub) => sum + (currentMonthFood.counts[sub.id] ?? 0),
+    0,
   );
 
   // 支出の推移（表示中の月を含む直近Nヶ月のカテゴリ別比較）
@@ -458,23 +472,46 @@ export function MonthlySummary() {
         </SectionCard>
       )}
 
-      {/* 外食・間食の回数推移 */}
+      {/* 外食・間食の回数・金額推移 */}
       {hasFrequencyData && (
         <SectionCard
-          title="外食・間食の回数"
-          summary={FOOD_SUBCATEGORIES.map(
-            (sub) => `${sub.label} ${currentMonthFrequency[sub.id] ?? 0}回`,
-          ).join('・')}
+          title="外食・間食"
+          summary={`${formatCurrency(currentMonthFoodAmount)}・${currentMonthFoodCount}回`}
           storageKey="summary.month.frequencyOpen"
         >
+            <Box sx={{ display: 'flex', justifyContent: 'center', pt: 1.5 }}>
+              <ToggleButtonGroup
+                size="small"
+                exclusive
+                value={foodTrendMode}
+                onChange={(_, value) => {
+                  if (value !== null) setFoodTrendMode(value);
+                }}
+              >
+                <ToggleButton value="count">回数</ToggleButton>
+                <ToggleButton value="amount">金額</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
             <Typography
               variant="caption"
               color="text.secondary"
               sx={{ display: 'block', px: 2, pt: 1 }}
             >
+              {month + 1}月: {FOOD_SUBCATEGORIES.map(
+                (sub) =>
+                  `${sub.label} ${currentMonthFood.counts[sub.id] ?? 0}回・${formatCurrency(
+                    currentMonthFood.amounts[sub.id] ?? 0,
+                  )}`,
+              ).join(' ／ ')}
+            </Typography>
+            <Typography
+              variant="caption"
+              color="text.secondary"
+              sx={{ display: 'block', px: 2, pt: 0.5 }}
+            >
               直近{FREQUENCY_TREND_MONTHS}ヶ月の推移
             </Typography>
-            <FoodFrequencyTrendChart data={foodFrequencyTrend} />
+            <FoodFrequencyTrendChart data={foodFrequencyTrend} mode={foodTrendMode} />
         </SectionCard>
       )}
 
