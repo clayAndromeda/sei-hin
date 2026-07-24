@@ -8,22 +8,33 @@ import {
   Paper,
   Stack,
   LinearProgress,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import TodayIcon from '@mui/icons-material/Today';
-import { getWeekRange, toDateString } from '../../utils/date';
+import { getWeekRange, toDateString, addDaysToDateString } from '../../utils/date';
 import { useExpensesByDateRange } from '../../hooks/useExpenses';
 import { useWeekBudget } from '../../hooks/useWeekBudget';
 import { formatCurrency } from '../../utils/format';
-import { aggregateByCategory, aggregateFoodSubcategoryCount } from '../../utils/chart';
+import {
+  aggregateByCategory,
+  aggregateFoodSubcategoryCount,
+  buildWeeklyCategoryTrend,
+} from '../../utils/chart';
 import { FOOD_SUBCATEGORIES } from '../../constants/foodSubcategories';
+import { usePersistedState } from '../../hooks/usePersistedState';
 import { CategoryDonutChart } from './CategoryDonutChart';
 import { DailyBarChart } from './DailyBarChart';
+import { PeriodTrendChart } from './PeriodTrendChart';
 import { ExpenseListSection } from './ExpenseListSection';
 import { SectionCard } from './SectionCard';
 import { ExpenseDialog } from '../ExpenseDialog/ExpenseDialog';
 import type { Expense } from '../../types';
+
+// 支出推移の表示期間の選択肢（週）
+const SPENDING_TREND_WEEK_OPTIONS = [4, 8, 12];
 
 export function WeeklySummary() {
   const today = new Date();
@@ -117,6 +128,27 @@ export function WeeklySummary() {
     daysForAverage = 7;
   }
   const dailyAverage = daysForAverage > 0 ? Math.floor(weekTotal / daysForAverage) : 0;
+
+  // 支出の推移（表示中の週を含む直近N週のカテゴリ別比較）
+  const [spendingTrendWeeks, setSpendingTrendWeeks] = usePersistedState(
+    'summary.week.trendWeeks',
+    8,
+  );
+  const weekStartStr = toDateString(weekStart);
+  const spendingTrendStart = addDaysToDateString(weekStartStr, -7 * (spendingTrendWeeks - 1));
+  const spendingTrendExpenses = useExpensesByDateRange(spendingTrendStart, weekEndStr);
+  const spendingTrend = buildWeeklyCategoryTrend(
+    spendingTrendExpenses,
+    weekStartStr,
+    spendingTrendWeeks,
+  );
+  const hasSpendingTrend = spendingTrend.some((w) => w.total > 0);
+  // 記録のある週だけで平均を出す（記録開始前の週で平均が下がるのを防ぐ）
+  const recordedWeeks = spendingTrend.filter((w) => w.total > 0);
+  const spendingTrendAverage =
+    recordedWeeks.length > 0
+      ? Math.floor(recordedWeeks.reduce((sum, w) => sum + w.total, 0) / recordedWeeks.length)
+      : 0;
 
   const goToPrevWeek = () => {
     const prev = new Date(weekStart);
@@ -255,6 +287,41 @@ export function WeeklySummary() {
       >
         <DailyBarChart dailyTotals={dailyTotals} expenses={expenses} />
       </SectionCard>
+
+      {/* 支出の推移（複数週のカテゴリ別比較） */}
+      {hasSpendingTrend && (
+        <SectionCard
+          title="支出の推移"
+          summary={`週平均 ${formatCurrency(spendingTrendAverage)}`}
+          storageKey="summary.week.spendingTrendOpen"
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'center', pt: 1.5 }}>
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              value={spendingTrendWeeks}
+              onChange={(_, value) => {
+                if (value !== null) setSpendingTrendWeeks(value);
+              }}
+            >
+              {SPENDING_TREND_WEEK_OPTIONS.map((count) => (
+                <ToggleButton key={count} value={count}>
+                  {count}週
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          </Box>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ display: 'block', px: 2, pt: 1 }}
+          >
+            直近{spendingTrendWeeks}週の支出・週平均 {formatCurrency(spendingTrendAverage)}
+            （記録のある週のみ）
+          </Typography>
+          <PeriodTrendChart data={spendingTrend} />
+        </SectionCard>
+      )}
 
       {/* 支出一覧 */}
       <ExpenseListSection

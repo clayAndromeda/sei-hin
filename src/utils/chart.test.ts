@@ -5,6 +5,8 @@ import {
   aggregateFoodSubcategoryCount,
   buildCategoryComparison,
   buildFoodSubcategoryMonthlyTrend,
+  buildMonthlyCategoryTrend,
+  buildWeeklyCategoryTrend,
   categoryMapToChartData,
 } from './chart';
 import type { Expense } from '../types';
@@ -124,6 +126,88 @@ describe('buildFoodSubcategoryMonthlyTrend', () => {
     expect(dec.counts).toEqual({ snack: 0, eating_out: 1 });
     expect(jan.counts).toEqual({ snack: 2, eating_out: 0 });
     expect(feb.counts).toEqual({ snack: 0, eating_out: 1 });
+  });
+});
+
+describe('buildMonthlyCategoryTrend', () => {
+  it('指定月数分の月次カテゴリ別合計を古い順で返す（データなしは空）', () => {
+    const result = buildMonthlyCategoryTrend([], 2026, 1, 3); // 2026年2月まで3ヶ月分
+    expect(result.map((m) => m.key)).toEqual(['2025-12', '2026-01', '2026-02']);
+    expect(result.map((m) => m.label)).toEqual(['12月', '1月', '2月']);
+    for (const m of result) {
+      expect(m.totals).toEqual({});
+      expect(m.total).toBe(0);
+    }
+  });
+
+  it('各月のカテゴリ別合計と月合計を正しく集計する', () => {
+    const expenses = [
+      createExpense({ id: '1', date: '2026-01-05', amount: 500, category: 'food' }),
+      createExpense({ id: '2', date: '2026-01-20', amount: 300, category: 'transport' }),
+      createExpense({ id: '3', date: '2026-02-01', amount: 200, category: 'food' }),
+      createExpense({ id: '4', date: '2025-12-31', amount: 100, category: 'books' }),
+    ];
+    const result = buildMonthlyCategoryTrend(expenses, 2026, 1, 3);
+    const [dec, jan, feb] = result;
+    expect(dec.totals).toEqual({ books: 100 });
+    expect(dec.total).toBe(100);
+    expect(jan.totals).toEqual({ food: 500, transport: 300 });
+    expect(jan.total).toBe(800);
+    expect(feb.totals).toEqual({ food: 200 });
+    expect(feb.total).toBe(200);
+  });
+
+  it('範囲外の支出は集計に含めない', () => {
+    const expenses = [
+      createExpense({ id: '1', date: '2025-11-30', amount: 999 }), // 範囲より前
+      createExpense({ id: '2', date: '2026-03-01', amount: 999 }), // 範囲より後
+    ];
+    const result = buildMonthlyCategoryTrend(expenses, 2026, 1, 3);
+    expect(result.every((m) => m.total === 0)).toBe(true);
+  });
+
+  it('年をまたぐ範囲でも正しい月を返す', () => {
+    const result = buildMonthlyCategoryTrend([], 2026, 1, 12); // 2025年3月〜2026年2月
+    expect(result[0].key).toBe('2025-03');
+    expect(result[11].key).toBe('2026-02');
+  });
+});
+
+describe('buildWeeklyCategoryTrend', () => {
+  it('指定週数分の週次カテゴリ別合計を古い順で返す（keyは週開始日）', () => {
+    // 2026-02-09は月曜
+    const result = buildWeeklyCategoryTrend([], '2026-02-09', 3);
+    expect(result.map((w) => w.key)).toEqual(['2026-01-26', '2026-02-02', '2026-02-09']);
+    expect(result.map((w) => w.label)).toEqual(['1/26', '2/2', '2/9']);
+    for (const w of result) {
+      expect(w.totals).toEqual({});
+      expect(w.total).toBe(0);
+    }
+  });
+
+  it('各週のカテゴリ別合計と週合計を正しく集計する', () => {
+    const expenses = [
+      createExpense({ id: '1', date: '2026-02-09', amount: 500, category: 'food' }), // 当週月曜
+      createExpense({ id: '2', date: '2026-02-15', amount: 300, category: 'food' }), // 当週日曜
+      createExpense({ id: '3', date: '2026-02-08', amount: 200, category: 'transport' }), // 前週日曜
+      createExpense({ id: '4', date: '2026-02-16', amount: 999 }), // 翌週月曜（範囲外）
+    ];
+    const result = buildWeeklyCategoryTrend(expenses, '2026-02-09', 2);
+    const [prev, current] = result;
+    expect(prev.totals).toEqual({ transport: 200 });
+    expect(prev.total).toBe(200);
+    expect(current.totals).toEqual({ food: 800 });
+    expect(current.total).toBe(800);
+  });
+
+  it('月をまたぐ週も正しく集計する', () => {
+    // 2026-01-26（月）〜2026-02-01（日）の週
+    const expenses = [
+      createExpense({ id: '1', date: '2026-01-31', amount: 100 }),
+      createExpense({ id: '2', date: '2026-02-01', amount: 200 }),
+    ];
+    const result = buildWeeklyCategoryTrend(expenses, '2026-01-26', 1);
+    expect(result[0].total).toBe(300);
   });
 });
 
