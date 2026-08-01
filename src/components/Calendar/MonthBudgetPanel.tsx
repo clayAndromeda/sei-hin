@@ -13,6 +13,7 @@ import { calcMonthBudgetStatus } from '../../utils/budget';
 
 interface MonthBudgetPanelProps {
   budget: number | null; // 月予算（未設定ならnull）
+  monthTotal: number; // 今月合計（表示中のフィルタ適用後、パネルに埋め込んで表示）
   variableSpent: number; // 変動費合計（特別な支出も含む）
   fixedCostTotal: number; // 固定費合計
   daysElapsed: number; // 経過日数
@@ -22,9 +23,10 @@ interface MonthBudgetPanelProps {
 }
 
 // カレンダービュー用の月予算パネル（コンパクト表示）
-// 予算残額を大きく表示し、今のペースで予算を超えそうな場合はバーが警告色になる
+// 今月合計と予算残額を並べて表示し、今のペースで予算を超えそうな場合はバーが警告色になる
 export function MonthBudgetPanel({
   budget,
+  monthTotal,
   variableSpent,
   fixedCostTotal,
   daysElapsed,
@@ -44,11 +46,16 @@ export function MonthBudgetPanel({
           justifyContent: 'space-between',
         }}
       >
-        <Typography variant="body2" color="text.secondary">
-          月予算が未設定です
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75 }}>
+          <Typography variant="caption" color="text.secondary">
+            今月合計
+          </Typography>
+          <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
+            {formatCurrency(monthTotal)}
+          </Typography>
+        </Box>
         <Button size="small" onClick={onEditBudget}>
-          設定する
+          予算を設定
         </Button>
       </Paper>
     );
@@ -72,31 +79,41 @@ export function MonthBudgetPanel({
         ...(status.isOver && { borderColor: 'error.main' }),
       }}
     >
-      {/* 残額（or 超過額）+ 編集ボタンを1行に */}
+      {/* 今月合計 + 残額（or 超過額）+ 編集ボタンを1行に */}
       <Box
         sx={{
           display: 'flex',
-          alignItems: 'center',
+          alignItems: 'flex-start',
           justifyContent: 'space-between',
         }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75 }}>
-          <Typography
-            variant="body2"
-            color={status.isOver ? 'error.main' : 'text.secondary'}
-          >
-            {status.isOver ? '予算超過' : '予算まであと'}
-          </Typography>
-          <Typography
-            variant="h6"
-            fontWeight="bold"
-            sx={{
-              lineHeight: 1.2,
-              color: status.isOver ? 'error.main' : 'success.main',
-            }}
-          >
-            {formatCurrency(Math.abs(status.remaining))}
-          </Typography>
+        <Box sx={{ display: 'flex', gap: 2.5 }}>
+          <Box>
+            <Typography variant="caption" color="text.secondary">
+              今月合計
+            </Typography>
+            <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
+              {formatCurrency(monthTotal)}
+            </Typography>
+          </Box>
+          <Box>
+            <Typography
+              variant="caption"
+              color={status.isOver ? 'error.main' : 'text.secondary'}
+            >
+              {status.isOver ? '予算超過' : '予算まであと'}
+            </Typography>
+            <Typography
+              variant="h6"
+              fontWeight="bold"
+              sx={{
+                lineHeight: 1.2,
+                color: status.isOver ? 'error.main' : 'success.main',
+              }}
+            >
+              {formatCurrency(Math.abs(status.remaining))}
+            </Typography>
+          </Box>
         </Box>
         <Tooltip title="この月の予算を変更">
           <IconButton
