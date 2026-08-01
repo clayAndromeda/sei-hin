@@ -6,9 +6,14 @@ import MyLocationIcon from '@mui/icons-material/MyLocation';
 import { CalendarGrid } from './CalendarGrid';
 import { ExpenseDialog } from '../ExpenseDialog/ExpenseDialog';
 import { WeekBudgetDialog } from './WeekBudgetDialog';
+import { MonthBudgetDialog } from './MonthBudgetDialog';
+import { MonthBudgetPanel } from './MonthBudgetPanel';
 import { useExpensesByDateRange } from '../../hooks/useExpenses';
+import { useMonthBudget } from '../../hooks/useMonthBudget';
+import { useMonthlyFixedCosts } from '../../hooks/useFixedCosts';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { getMonthDays, toDateString } from '../../utils/date';
+import { formatYearMonth } from '../../utils/fixedCost';
 import { formatCurrency } from '../../utils/format';
 import { aggregateByCategory } from '../../utils/chart';
 import { CategoryDonutChart } from '../Summary/CategoryDonutChart';
@@ -19,6 +24,7 @@ export function CalendarView() {
   const [month, setMonth] = useState(today.getMonth());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | null>(null);
+  const [monthBudgetDialogOpen, setMonthBudgetDialogOpen] = useState(false);
   const [excludeSpecial, setExcludeSpecial] = usePersistedState('excludeSpecial', false);
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
@@ -55,6 +61,14 @@ export function CalendarView() {
   const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
   const daysForAverage = isCurrentMonth ? today.getDate() : lastDayOfMonth;
   const dailyAverage = daysForAverage > 0 ? Math.floor(monthTotal / daysForAverage) : 0;
+
+  // 月予算との比較（特別な支出も含めるため、表示フィルタ前の全支出から集計する）
+  const yearMonth = formatYearMonth(year, month);
+  const monthBudget = useMonthBudget(yearMonth);
+  const { total: fixedCostTotal } = useMonthlyFixedCosts(yearMonth);
+  const monthTotalForBudget = allExpenses
+    .filter(e => e.date >= monthStartStr && e.date <= monthEndStr)
+    .reduce((sum, e) => sum + e.amount, 0);
 
   const goToPrevMonth = () => {
     if (month === 0) {
@@ -162,6 +176,21 @@ export function CalendarView() {
           </Typography>
         )}
 
+        {/* 月予算パネル（モバイルのみ。PC版はサマリーパネル内に表示） */}
+        {!isDesktop && (
+          <Box sx={{ mb: { xs: 1, sm: 2 } }}>
+            <MonthBudgetPanel
+              budget={monthBudget}
+              variableSpent={monthTotalForBudget}
+              fixedCostTotal={fixedCostTotal}
+              daysElapsed={daysForAverage}
+              daysInMonth={lastDayOfMonth}
+              isCurrentMonth={isCurrentMonth}
+              onEditBudget={() => setMonthBudgetDialogOpen(true)}
+            />
+          </Box>
+        )}
+
         {/* カレンダーグリッド */}
         <CalendarGrid
           year={year}
@@ -182,6 +211,19 @@ export function CalendarView() {
             </Typography>
 
             <Divider sx={{ mb: 2 }} />
+
+            {/* 月予算パネル */}
+            <Box sx={{ mb: 2 }}>
+              <MonthBudgetPanel
+                budget={monthBudget}
+                variableSpent={monthTotalForBudget}
+                fixedCostTotal={fixedCostTotal}
+                daysElapsed={daysForAverage}
+                daysInMonth={lastDayOfMonth}
+                isCurrentMonth={isCurrentMonth}
+                onEditBudget={() => setMonthBudgetDialogOpen(true)}
+              />
+            </Box>
 
             {/* 月合計・平均 */}
             <Box sx={{ mb: 2 }}>
@@ -223,6 +265,13 @@ export function CalendarView() {
         open={selectedWeekStart !== null}
         weekStart={selectedWeekStart ?? ''}
         onClose={() => setSelectedWeekStart(null)}
+      />
+
+      {/* 月予算設定ダイアログ */}
+      <MonthBudgetDialog
+        open={monthBudgetDialogOpen}
+        yearMonth={yearMonth}
+        onClose={() => setMonthBudgetDialogOpen(false)}
       />
     </Box>
   );

@@ -28,3 +28,46 @@ export async function setDefaultMonthBudget(budget: number): Promise<void> {
   });
   markDataChanged();
 }
+
+// 特定月の予算を取得（個別設定 or デフォルト、リアクティブ）
+export function useMonthBudget(yearMonth: string): number | null {
+  const monthBudget = useLiveQuery(
+    () => db.monthBudgets.get(yearMonth),
+    [yearMonth],
+    undefined,
+  );
+
+  const defaultBudget = useDefaultMonthBudget();
+
+  // 個別設定が存在し、削除されていなければそれを返す
+  if (monthBudget !== undefined && !monthBudget.deleted) {
+    return monthBudget.budget;
+  }
+  return defaultBudget;
+}
+
+// 月予算を個別設定
+export async function setMonthBudget(
+  yearMonth: string,
+  budget: number,
+): Promise<void> {
+  await db.monthBudgets.put({
+    yearMonth,
+    budget,
+    updatedAt: new Date().toISOString(),
+  });
+  markDataChanged();
+}
+
+// 個別の月予算を論理削除（デフォルトに戻す）
+export async function deleteMonthBudget(yearMonth: string): Promise<void> {
+  const existing = await db.monthBudgets.get(yearMonth);
+  if (existing) {
+    await db.monthBudgets.put({
+      ...existing,
+      deleted: true,
+      updatedAt: new Date().toISOString(),
+    });
+    markDataChanged();
+  }
+}

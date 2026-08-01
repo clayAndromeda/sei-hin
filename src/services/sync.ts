@@ -4,6 +4,7 @@ import type {
   Expense,
   SeihinData,
   WeekBudget,
+  MonthBudget,
   DefaultWeekBudgetSync,
   DefaultMonthBudgetSync,
   FixedCostItem,
@@ -52,6 +53,27 @@ export function mergeWeekBudgets(
     const existing = merged.get(wb.weekStart);
     if (!existing || wb.updatedAt > existing.updatedAt) {
       merged.set(wb.weekStart, wb);
+    }
+  }
+
+  return Array.from(merged.values());
+}
+
+// 月予算のマージロジック: yearMonthをキーにupdatedAtで新しい方を採用
+export function mergeMonthBudgets(
+  local: MonthBudget[],
+  remote: MonthBudget[],
+): MonthBudget[] {
+  const merged = new Map<string, MonthBudget>();
+
+  for (const mb of local) {
+    merged.set(mb.yearMonth, mb);
+  }
+
+  for (const mb of remote) {
+    const existing = merged.get(mb.yearMonth);
+    if (!existing || mb.updatedAt > existing.updatedAt) {
+      merged.set(mb.yearMonth, mb);
     }
   }
 
@@ -132,6 +154,14 @@ function extractRemoteWeekBudgets(data: SeihinData): WeekBudget[] {
   }));
 }
 
+// リモートデータからmonthBudgetsを安全に取り出す（後方互換）
+function extractRemoteMonthBudgets(data: SeihinData): MonthBudget[] {
+  return (data.monthBudgets ?? []).map((mb) => ({
+    ...mb,
+    updatedAt: mb.updatedAt ?? '1970-01-01T00:00:00.000Z',
+  }));
+}
+
 // 固定費項目のマージ: idをキーにupdatedAtで新しい方を採用
 export function mergeFixedCostItems(
   local: FixedCostItem[],
@@ -188,6 +218,7 @@ export async function performSync(): Promise<void> {
     // 1. ローカルの全データを取得（削除済み含む）
     const localExpenses = await db.expenses.toArray();
     const localWeekBudgets = await db.weekBudgets.toArray();
+    const localMonthBudgets = await db.monthBudgets.toArray();
     const localDefaultWB = await getLocalDefaultWeekBudget();
     const localDefaultMB = await getLocalDefaultMonthBudget();
     const localFixedCostItems = await db.fixedCostItems.toArray();
@@ -198,6 +229,7 @@ export async function performSync(): Promise<void> {
 
     let mergedExpenses: Expense[];
     let mergedWeekBudgets: WeekBudget[];
+    let mergedMonthBudgets: MonthBudget[];
     let mergedDefaultWB: DefaultWeekBudgetSync | null;
     let mergedDefaultMB: DefaultMonthBudgetSync | null;
     let mergedFixedCostItems: FixedCostItem[];
@@ -212,6 +244,7 @@ export async function performSync(): Promise<void> {
         isSpecial: e.isSpecial ?? false,
       }));
       const remoteWeekBudgets = extractRemoteWeekBudgets(downloaded.data);
+      const remoteMonthBudgets = extractRemoteMonthBudgets(downloaded.data);
       const remoteDefaultWB = downloaded.data.defaultWeekBudget ?? null;
       const remoteDefaultMB = downloaded.data.defaultMonthBudget ?? null;
       const remoteFixedCostItems = downloaded.data.fixedCostItems ?? [];
@@ -220,6 +253,7 @@ export async function performSync(): Promise<void> {
       // 3. マージ
       mergedExpenses = mergeExpenses(localExpenses, remoteExpenses);
       mergedWeekBudgets = mergeWeekBudgets(localWeekBudgets, remoteWeekBudgets);
+      mergedMonthBudgets = mergeMonthBudgets(localMonthBudgets, remoteMonthBudgets);
       mergedDefaultWB = mergeDefaultWeekBudget(localDefaultWB, remoteDefaultWB);
       mergedDefaultMB = mergeDefaultMonthBudget(localDefaultMB, remoteDefaultMB);
       mergedFixedCostItems = mergeFixedCostItems(
@@ -235,6 +269,7 @@ export async function performSync(): Promise<void> {
       // Dropboxにファイルがない場合はローカルのみ
       mergedExpenses = localExpenses;
       mergedWeekBudgets = localWeekBudgets;
+      mergedMonthBudgets = localMonthBudgets;
       mergedDefaultWB = localDefaultWB;
       mergedDefaultMB = localDefaultMB;
       mergedFixedCostItems = localFixedCostItems;
@@ -244,15 +279,20 @@ export async function performSync(): Promise<void> {
     // 4. ローカルに保存（一括置換）
     await db.transaction(
       'rw',
-      db.expenses,
-      db.weekBudgets,
-      db.fixedCostItems,
-      db.fixedCostAmountChanges,
+      [
+        db.expenses,
+        db.weekBudgets,
+        db.monthBudgets,
+        db.fixedCostItems,
+        db.fixedCostAmountChanges,
+      ],
       async () => {
         await db.expenses.clear();
         await db.expenses.bulkAdd(mergedExpenses);
         await db.weekBudgets.clear();
         await db.weekBudgets.bulkAdd(mergedWeekBudgets);
+        await db.monthBudgets.clear();
+        await db.monthBudgets.bulkAdd(mergedMonthBudgets);
         await db.fixedCostItems.clear();
         await db.fixedCostItems.bulkAdd(mergedFixedCostItems);
         await db.fixedCostAmountChanges.clear();
@@ -268,7 +308,7 @@ export async function performSync(): Promise<void> {
 
     // 5. Dropboxにアップロード
     const dataToUpload: SeihinData = {
-      version: 5,
+      version: 6,
       updatedAt: new Date().toISOString(),
       expenses: mergedExpenses,
       weekBudgets: mergedWeekBudgets,
@@ -276,6 +316,7 @@ export async function performSync(): Promise<void> {
       fixedCostItems: mergedFixedCostItems,
       fixedCostAmountChanges: mergedFixedCostChanges,
       defaultMonthBudget: mergedDefaultMB ?? undefined,
+      monthBudgets: mergedMonthBudgets,
     };
 
     try {
@@ -291,6 +332,7 @@ export async function performSync(): Promise<void> {
             isSpecial: e.isSpecial ?? false,
           }));
           const retryRemoteWB = extractRemoteWeekBudgets(retryDownload.data);
+          const retryRemoteMB = extractRemoteMonthBudgets(retryDownload.data);
           const retryRemoteDefaultWB = retryDownload.data.defaultWeekBudget ?? null;
           const retryRemoteDefaultMB = retryDownload.data.defaultMonthBudget ?? null;
           const retryRemoteFCI = retryDownload.data.fixedCostItems ?? [];
@@ -298,6 +340,7 @@ export async function performSync(): Promise<void> {
 
           const retryMergedExpenses = mergeExpenses(mergedExpenses, retryRemote);
           const retryMergedWB = mergeWeekBudgets(mergedWeekBudgets, retryRemoteWB);
+          const retryMergedMB = mergeMonthBudgets(mergedMonthBudgets, retryRemoteMB);
           const retryMergedDefaultWB = mergeDefaultWeekBudget(mergedDefaultWB, retryRemoteDefaultWB);
           const retryMergedDefaultMB = mergeDefaultMonthBudget(mergedDefaultMB, retryRemoteDefaultMB);
           const retryMergedFCI = mergeFixedCostItems(
@@ -311,15 +354,20 @@ export async function performSync(): Promise<void> {
 
           await db.transaction(
             'rw',
-            db.expenses,
-            db.weekBudgets,
-            db.fixedCostItems,
-            db.fixedCostAmountChanges,
+            [
+              db.expenses,
+              db.weekBudgets,
+              db.monthBudgets,
+              db.fixedCostItems,
+              db.fixedCostAmountChanges,
+            ],
             async () => {
               await db.expenses.clear();
               await db.expenses.bulkAdd(retryMergedExpenses);
               await db.weekBudgets.clear();
               await db.weekBudgets.bulkAdd(retryMergedWB);
+              await db.monthBudgets.clear();
+              await db.monthBudgets.bulkAdd(retryMergedMB);
               await db.fixedCostItems.clear();
               await db.fixedCostItems.bulkAdd(retryMergedFCI);
               await db.fixedCostAmountChanges.clear();
@@ -334,7 +382,7 @@ export async function performSync(): Promise<void> {
           }
 
           const retryData: SeihinData = {
-            version: 5,
+            version: 6,
             updatedAt: new Date().toISOString(),
             expenses: retryMergedExpenses,
             weekBudgets: retryMergedWB,
@@ -342,6 +390,7 @@ export async function performSync(): Promise<void> {
             fixedCostItems: retryMergedFCI,
             fixedCostAmountChanges: retryMergedFCC,
             defaultMonthBudget: retryMergedDefaultMB ?? undefined,
+            monthBudgets: retryMergedMB,
           };
           await uploadFile(retryData, retryDownload.rev);
         }
@@ -361,6 +410,13 @@ export async function performSync(): Promise<void> {
       .map((wb) => wb.weekStart);
     if (deletedWBKeys.length > 0) {
       await db.weekBudgets.bulkDelete(deletedWBKeys);
+    }
+
+    const deletedMBKeys = mergedMonthBudgets
+      .filter((mb) => mb.deleted)
+      .map((mb) => mb.yearMonth);
+    if (deletedMBKeys.length > 0) {
+      await db.monthBudgets.bulkDelete(deletedMBKeys);
     }
 
     const deletedFCIIds = mergedFixedCostItems

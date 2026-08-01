@@ -166,6 +166,7 @@ export function SettingsView({
         [
           db.expenses,
           db.weekBudgets,
+          db.monthBudgets,
           db.fixedCostItems,
           db.fixedCostAmountChanges,
           db.metadata,
@@ -176,6 +177,9 @@ export function SettingsView({
           }
           if (importPreview.weekBudgets?.length) {
             await db.weekBudgets.bulkPut(importPreview.weekBudgets);
+          }
+          if (importPreview.monthBudgets?.length) {
+            await db.monthBudgets.bulkPut(importPreview.monthBudgets);
           }
           if (importPreview.fixedCostItems?.length) {
             await db.fixedCostItems.bulkPut(importPreview.fixedCostItems);
@@ -211,6 +215,9 @@ export function SettingsView({
         `支出${importPreview.expenses.length}件`,
         importPreview.weekBudgets?.length
           ? `週予算${importPreview.weekBudgets.length}件`
+          : null,
+        importPreview.monthBudgets?.length
+          ? `月予算${importPreview.monthBudgets.length}件`
           : null,
         importPreview.fixedCostItems?.length
           ? `固定費項目${importPreview.fixedCostItems.length}件`
@@ -367,7 +374,8 @@ export function SettingsView({
         月予算設定
       </Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-        固定費と変動費を合わせた月全体の予算です。月間サマリーで消化状況が表示されます。
+        固定費と変動費を合わせた月全体のデフォルト予算です。カレンダーと月間サマリーで消化状況が表示されます。
+        月ごとの個別予算はカレンダーの予算パネルから設定できます。
       </Typography>
       <List dense>
         <ListItem>
@@ -457,6 +465,9 @@ export function SettingsView({
               <li>支出: {importPreview?.expenses.length ?? 0} 件</li>
               {importPreview?.weekBudgets !== undefined && (
                 <li>週予算: {importPreview.weekBudgets.length} 件</li>
+              )}
+              {importPreview?.monthBudgets !== undefined && (
+                <li>月予算: {importPreview.monthBudgets.length} 件</li>
               )}
               {importPreview?.fixedCostItems !== undefined && (
                 <li>固定費項目: {importPreview.fixedCostItems.length} 件</li>

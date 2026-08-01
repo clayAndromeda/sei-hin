@@ -35,6 +35,7 @@
 - `expenses`: 支出記録（id, date, category, createdAt, updatedAt）
 - `metadata`: KVストア（Dropboxトークン、最終同期日時）
 - `weekBudgets`: 週予算（weekStart=月曜日のYYYY-MM-DD、budget、updatedAt、deleted）
+- `monthBudgets`: 月予算の個別設定（yearMonth=YYYY-MM、budget、updatedAt、deleted。未設定月はデフォルト月予算を適用）
 
 **スキーマバージョン履歴:**
 - **v1**: 初期（expenses, metadata）
@@ -42,6 +43,7 @@
 - **v3**: weekBudgetsテーブル追加
 - **v4**: isSpecialフィールド追加（特別な支出フラグ）
 - **v5**: WeekBudgetにupdatedAt, deletedフィールド追加（Dropbox同期対応）
+- **v10**: monthBudgetsテーブル追加（月ごとの個別予算設定）
 
 ## UI構成
 

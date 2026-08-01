@@ -26,7 +26,7 @@ export interface DefaultMonthBudgetSync {
 
 // Dropboxに保存するデータ全体
 export interface SeihinData {
-  version: 1 | 2 | 3 | 4 | 5;
+  version: 1 | 2 | 3 | 4 | 5 | 6;
   updatedAt: string; // ISO 8601 datetime
   expenses: Expense[];
   weekBudgets?: WeekBudget[]; // v3で追加（後方互換のためoptional）
@@ -34,6 +34,7 @@ export interface SeihinData {
   fixedCostItems?: FixedCostItem[]; // v4で追加（後方互換のためoptional）
   fixedCostAmountChanges?: FixedCostAmountChange[]; // v4で追加（後方互換のためoptional）
   defaultMonthBudget?: DefaultMonthBudgetSync; // v5で追加（後方互換のためoptional）
+  monthBudgets?: MonthBudget[]; // v6で追加（後方互換のためoptional）
 }
 
 // メタデータ（IndexedDB用）
@@ -46,6 +47,14 @@ export interface Metadata {
 export interface WeekBudget {
   weekStart: string; // 週の開始日（月曜日のYYYY-MM-DD形式）
   budget: number; // 週予算（円）
+  updatedAt: string; // ISO 8601 datetime（同期マージ用）
+  deleted?: boolean; // 削除フラグ（同期用）
+}
+
+// 月予算（月ごとの個別予算設定。未設定月はデフォルト月予算が適用される）
+export interface MonthBudget {
+  yearMonth: string; // "YYYY-MM" 形式
+  budget: number; // 月予算（円、固定費+変動費）
   updatedAt: string; // ISO 8601 datetime（同期マージ用）
   deleted?: boolean; // 削除フラグ（同期用）
 }

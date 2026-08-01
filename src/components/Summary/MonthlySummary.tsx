@@ -22,7 +22,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import { useExpensesByMonth, useExpensesByDateRange } from '../../hooks/useExpenses';
 import { useMonthlyFixedCosts } from '../../hooks/useFixedCosts';
-import { useDefaultMonthBudget } from '../../hooks/useMonthBudget';
+import { useMonthBudget } from '../../hooks/useMonthBudget';
 import { formatCurrency } from '../../utils/format';
 import { toDateString } from '../../utils/date';
 import {
@@ -89,8 +89,8 @@ export function MonthlySummary() {
     .filter((e) => e.isSpecial)
     .reduce((sum, e) => sum + e.amount, 0);
 
-  // 月予算（固定費+変動費）との比較（特別な支出も含める）
-  const monthBudget = useDefaultMonthBudget();
+  // 月予算（固定費+変動費）との比較（特別な支出も含める。個別設定 or デフォルト）
+  const monthBudget = useMonthBudget(yearMonth);
   const budgetSpent = monthTotal + fixedCostTotal;
   const isOverBudget = monthBudget !== null && budgetSpent > monthBudget;
   const budgetRemaining = monthBudget !== null ? monthBudget - budgetSpent : 0;
