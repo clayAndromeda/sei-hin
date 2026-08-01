@@ -4,6 +4,7 @@ import type {
   FixedCostAmountChange,
   FixedCostItem,
   Metadata,
+  MonthBudget,
   WeekBudget,
 } from '../types';
 
@@ -13,6 +14,7 @@ export class SeihinDB extends Dexie {
   weekBudgets!: Table<WeekBudget, string>;
   fixedCostItems!: Table<FixedCostItem, string>;
   fixedCostAmountChanges!: Table<FixedCostAmountChange, string>;
+  monthBudgets!: Table<MonthBudget, string>;
 
   constructor() {
     super('seihin');
@@ -141,6 +143,17 @@ export class SeihinDB extends Dexie {
       fixedCostItems: 'id, order, startYearMonth, endYearMonth, updatedAt',
       fixedCostAmountChanges:
         'id, itemId, effectiveYearMonth, updatedAt, [itemId+effectiveYearMonth]',
+    });
+
+    // v10: 月予算テーブル追加（月ごとの個別予算設定）
+    this.version(10).stores({
+      expenses: 'id, date, category, createdAt, updatedAt',
+      metadata: 'key',
+      weekBudgets: 'weekStart',
+      fixedCostItems: 'id, order, startYearMonth, endYearMonth, updatedAt',
+      fixedCostAmountChanges:
+        'id, itemId, effectiveYearMonth, updatedAt, [itemId+effectiveYearMonth]',
+      monthBudgets: 'yearMonth',
     });
   }
 }

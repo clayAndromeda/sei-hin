@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   mergeExpenses,
   mergeWeekBudgets,
+  mergeMonthBudgets,
   mergeDefaultWeekBudget,
   mergeDefaultMonthBudget,
   mergeFixedCostItems,
@@ -10,6 +11,7 @@ import {
 import type {
   Expense,
   WeekBudget,
+  MonthBudget,
   DefaultWeekBudgetSync,
   DefaultMonthBudgetSync,
   FixedCostItem,
@@ -252,6 +254,80 @@ describe('mergeWeekBudgets', () => {
     // 2026-02-23はリモートから追加
     const wb23 = result.find((wb) => wb.weekStart === '2026-02-23');
     expect(wb23?.budget).toBe(7000);
+  });
+});
+
+// テスト用のMonthBudgetヘルパー
+function createMonthBudget(overrides: Partial<MonthBudget> = {}): MonthBudget {
+  return {
+    yearMonth: '2026-02',
+    budget: 100000,
+    updatedAt: '2026-02-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+describe('mergeMonthBudgets', () => {
+  it('ローカルのみの場合、ローカルをそのまま返す', () => {
+    const local = [createMonthBudget()];
+    const result = mergeMonthBudgets(local, []);
+    expect(result).toHaveLength(1);
+    expect(result[0].yearMonth).toBe('2026-02');
+  });
+
+  it('リモートのみの場合、リモートをそのまま返す', () => {
+    const remote = [createMonthBudget()];
+    const result = mergeMonthBudgets([], remote);
+    expect(result).toHaveLength(1);
+    expect(result[0].yearMonth).toBe('2026-02');
+  });
+
+  it('両方空の場合、空配列を返す', () => {
+    const result = mergeMonthBudgets([], []);
+    expect(result).toHaveLength(0);
+  });
+
+  it('同一yearMonthでリモートが新しい場合、リモートを採用する', () => {
+    const local = [
+      createMonthBudget({ budget: 80000, updatedAt: '2026-02-01T10:00:00Z' }),
+    ];
+    const remote = [
+      createMonthBudget({ budget: 90000, updatedAt: '2026-02-01T11:00:00Z' }),
+    ];
+    const result = mergeMonthBudgets(local, remote);
+    expect(result).toHaveLength(1);
+    expect(result[0].budget).toBe(90000);
+  });
+
+  it('同一yearMonthでローカルが新しい場合、ローカルを採用する', () => {
+    const local = [
+      createMonthBudget({ budget: 80000, updatedAt: '2026-02-01T12:00:00Z' }),
+    ];
+    const remote = [
+      createMonthBudget({ budget: 90000, updatedAt: '2026-02-01T11:00:00Z' }),
+    ];
+    const result = mergeMonthBudgets(local, remote);
+    expect(result).toHaveLength(1);
+    expect(result[0].budget).toBe(80000);
+  });
+
+  it('異なるyearMonthは両方保持される', () => {
+    const local = [createMonthBudget({ yearMonth: '2026-02' })];
+    const remote = [createMonthBudget({ yearMonth: '2026-03' })];
+    const result = mergeMonthBudgets(local, remote);
+    expect(result).toHaveLength(2);
+  });
+
+  it('削除フラグ付きのリモートが新しい場合、削除が反映される', () => {
+    const local = [
+      createMonthBudget({ updatedAt: '2026-02-01T10:00:00Z' }),
+    ];
+    const remote = [
+      createMonthBudget({ deleted: true, updatedAt: '2026-02-01T11:00:00Z' }),
+    ];
+    const result = mergeMonthBudgets(local, remote);
+    expect(result).toHaveLength(1);
+    expect(result[0].deleted).toBe(true);
   });
 });
 
