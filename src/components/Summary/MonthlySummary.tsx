@@ -8,7 +8,6 @@ import {
   ListItemText,
   Divider,
   Button,
-  Chip,
   Paper,
   Stack,
   LinearProgress,
@@ -33,7 +32,6 @@ import {
 import {
   aggregateByCategory,
   aggregateFoodBySubcategory,
-  buildCategoryComparison,
   buildFoodSubcategoryMonthlyTrend,
   buildMonthlyCategoryTrend,
 } from '../../utils/chart';
@@ -77,11 +75,6 @@ export function MonthlySummary() {
   const { resolved: fixedCosts, total: fixedCostTotal } =
     useMonthlyFixedCosts(yearMonth);
 
-  // 前月のデータを取得
-  const prevMonth = month === 0 ? 11 : month - 1;
-  const prevYear = month === 0 ? year - 1 : year;
-  const prevMonthExpenses = useExpensesByMonth(prevYear, prevMonth);
-
   const monthTotal = expenses.reduce((sum, e) => sum + e.amount, 0);
 
   // 特別な支出の合計
@@ -99,21 +92,8 @@ export function MonthlySummary() {
       ? Math.min((budgetSpent / monthBudget) * 100, 100)
       : 0;
 
-  // 前月の合計
-  const prevMonthTotal = prevMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
-  const monthDiff = monthTotal - prevMonthTotal;
-  const monthDiffPercent = prevMonthTotal > 0 ? Math.round((monthDiff / prevMonthTotal) * 100) : 0;
-
-  // 平均の分母: 当月なら今日までの日数、過去月なら月の日数
-  const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
-  const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
-  const daysForAverage = isCurrentMonth ? today.getDate() : lastDayOfMonth;
-  const dailyAverage = daysForAverage > 0 ? Math.floor(monthTotal / daysForAverage) : 0;
-
   // カテゴリ別集計
   const categoryTotals = aggregateByCategory(expenses);
-  const prevCategoryTotals = aggregateByCategory(prevMonthExpenses);
-  const categoryComparison = buildCategoryComparison(categoryTotals, prevCategoryTotals);
 
   // 食費のサブカテゴリ別集計（間食の無駄遣いを把握するため）
   const foodSubcategoryTotals = aggregateFoodBySubcategory(expenses);
@@ -175,23 +155,6 @@ export function MonthlySummary() {
           recordedMonths.reduce((sum, m) => sum + m.total, 0) / recordedMonths.length,
         )
       : 0;
-
-  // 1日平均の前月比: 期間を揃えて比較する（MTD同士）
-  // 当月進行中の場合、前月も同じ日数分のみを対象にする（例: 今日が4/5なら3/1〜3/5のみ）。
-  // 過去月閲覧時は両月ともフル期間で比較する。
-  const prevMonthLastDay = new Date(prevYear, prevMonth + 1, 0).getDate();
-  const prevDaysForAverage = isCurrentMonth
-    ? Math.min(today.getDate(), prevMonthLastDay)
-    : prevMonthLastDay;
-  const prevMonthTotalForAverage = isCurrentMonth
-    ? prevMonthExpenses
-        .filter((e) => parseInt(e.date.slice(8, 10), 10) <= prevDaysForAverage)
-        .reduce((sum, e) => sum + e.amount, 0)
-    : prevMonthTotal;
-  const prevDailyAverage = prevDaysForAverage > 0
-    ? Math.floor(prevMonthTotalForAverage / prevDaysForAverage)
-    : 0;
-  const dailyAverageDiff = dailyAverage - prevDailyAverage;
 
   const goToPrevMonth = () => {
     if (month === 0) {
@@ -303,34 +266,6 @@ export function MonthlySummary() {
           </Box>
         )}
 
-        <Divider sx={{ my: 1.5 }} />
-        <Typography variant="body2" color="text.secondary">
-          1日平均（変動費）: {formatCurrency(dailyAverage)}
-        </Typography>
-        {prevMonthTotal > 0 && (
-          <>
-            <Typography
-              variant="body2"
-              sx={{
-                color: monthDiff > 0 ? 'error.main' : monthDiff < 0 ? 'success.main' : 'text.secondary',
-                mt: 0.5,
-              }}
-            >
-              前月比（変動費）: {monthDiff > 0 ? '+' : ''}
-              {formatCurrency(monthDiff)} ({monthDiff > 0 ? '+' : ''}
-              {monthDiffPercent}%)
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{
-                color: dailyAverageDiff > 0 ? 'error.main' : dailyAverageDiff < 0 ? 'success.main' : 'text.secondary',
-              }}
-            >
-              前月比（1日平均）: {dailyAverageDiff > 0 ? '+' : ''}
-              {formatCurrency(dailyAverageDiff)}
-            </Typography>
-          </>
-        )}
         {specialTotal > 0 && (
           <Typography
             variant="body2"
@@ -340,6 +275,14 @@ export function MonthlySummary() {
           </Typography>
         )}
       </Paper>
+
+      {/* 支出一覧（カテゴリフィルタあり。参照頻度が高いため上部に配置） */}
+      <ExpenseListSection
+        expenses={expenses}
+        onEditExpense={openExpenseDialog}
+        storageKey="summary.month.expensesOpen"
+        defaultOpen
+      />
 
       {/* カテゴリ別ドーナツチャート */}
       <SectionCard
@@ -353,124 +296,6 @@ export function MonthlySummary() {
           foodSubcategoryTotals={foodSubcategoryTotals}
         />
       </SectionCard>
-
-      {/* カテゴリ別前月比較 */}
-      {categoryComparison.length > 0 && prevMonthTotal > 0 && (
-        <SectionCard
-          title="前月比較（カテゴリ別）"
-          storageKey="summary.month.comparisonOpen"
-        >
-            <Box sx={{ px: 1, py: 1 }}>
-              <Box
-                sx={{
-                  display: 'grid',
-                  gridTemplateColumns: 'auto 1fr 1fr 1fr',
-                  gap: 0.5,
-                  alignItems: 'center',
-                  fontSize: '0.75rem',
-                  px: 1,
-                }}
-              >
-                <Box />
-                <Typography variant="caption" color="text.secondary" align="right">
-                  今月
-                </Typography>
-                <Typography variant="caption" color="text.secondary" align="right">
-                  前月
-                </Typography>
-                <Typography variant="caption" color="text.secondary" align="right">
-                  差分
-                </Typography>
-                {categoryComparison.map((row) => {
-                  const diffColor =
-                    row.diff > 0 ? 'error.main'
-                    : row.diff < 0 ? 'success.main'
-                    : 'text.secondary';
-                  const sign = row.diff > 0 ? '+' : '';
-                  const percentText =
-                    row.diffPercent === null
-                      ? '新規'
-                      : `${sign}${row.diffPercent}%`;
-                  return (
-                    <Box key={row.id} sx={{ display: 'contents' }}>
-                      <Chip
-                        label={row.label}
-                        size="small"
-                        sx={{
-                          backgroundColor: row.color,
-                          color: '#fff',
-                          fontSize: '0.65rem',
-                          height: 20,
-                          justifySelf: 'start',
-                        }}
-                      />
-                      <Typography variant="body2" align="right" sx={{ fontSize: '0.8rem' }}>
-                        {formatCurrency(row.current)}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        align="right"
-                        color="text.secondary"
-                        sx={{ fontSize: '0.8rem' }}
-                      >
-                        {formatCurrency(row.previous)}
-                      </Typography>
-                      <Box sx={{ textAlign: 'right' }}>
-                        <Typography
-                          variant="body2"
-                          sx={{ color: diffColor, fontSize: '0.8rem', lineHeight: 1.2 }}
-                        >
-                          {sign}{formatCurrency(row.diff)}
-                        </Typography>
-                        <Typography
-                          variant="caption"
-                          sx={{ color: diffColor, fontSize: '0.65rem' }}
-                        >
-                          {percentText}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  );
-                })}
-              </Box>
-            </Box>
-        </SectionCard>
-      )}
-
-      {/* 支出の推移（複数月のカテゴリ別比較） */}
-      {hasSpendingTrend && (
-        <SectionCard
-          title="支出の推移"
-          summary={`月平均 ${formatCurrency(spendingTrendAverage)}`}
-          storageKey="summary.month.spendingTrendOpen"
-        >
-          <Box sx={{ display: 'flex', justifyContent: 'center', pt: 1.5 }}>
-            <ToggleButtonGroup
-              size="small"
-              exclusive
-              value={spendingTrendMonths}
-              onChange={(_, value) => {
-                if (value !== null) setSpendingTrendMonths(value);
-              }}
-            >
-              {SPENDING_TREND_MONTH_OPTIONS.map((count) => (
-                <ToggleButton key={count} value={count}>
-                  {count}ヶ月
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
-          </Box>
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{ display: 'block', px: 2, pt: 1 }}
-          >
-            直近{spendingTrendMonths}ヶ月の変動費・月平均 {formatCurrency(spendingTrendAverage)}
-            （記録のある月のみ）
-          </Typography>
-          <PeriodTrendChart data={spendingTrend} />
-        </SectionCard>
-      )}
 
       {/* 外食・間食の回数・金額推移 */}
       {hasFrequencyData && (
@@ -512,6 +337,41 @@ export function MonthlySummary() {
               直近{FREQUENCY_TREND_MONTHS}ヶ月の推移
             </Typography>
             <FoodFrequencyTrendChart data={foodFrequencyTrend} mode={foodTrendMode} />
+        </SectionCard>
+      )}
+
+      {/* 支出の推移（複数月のカテゴリ別比較） */}
+      {hasSpendingTrend && (
+        <SectionCard
+          title="支出の推移"
+          summary={`月平均 ${formatCurrency(spendingTrendAverage)}`}
+          storageKey="summary.month.spendingTrendOpen"
+        >
+          <Box sx={{ display: 'flex', justifyContent: 'center', pt: 1.5 }}>
+            <ToggleButtonGroup
+              size="small"
+              exclusive
+              value={spendingTrendMonths}
+              onChange={(_, value) => {
+                if (value !== null) setSpendingTrendMonths(value);
+              }}
+            >
+              {SPENDING_TREND_MONTH_OPTIONS.map((count) => (
+                <ToggleButton key={count} value={count}>
+                  {count}ヶ月
+                </ToggleButton>
+              ))}
+            </ToggleButtonGroup>
+          </Box>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            sx={{ display: 'block', px: 2, pt: 1 }}
+          >
+            直近{spendingTrendMonths}ヶ月の変動費・月平均 {formatCurrency(spendingTrendAverage)}
+            （記録のある月のみ）
+          </Typography>
+          <PeriodTrendChart data={spendingTrend} />
         </SectionCard>
       )}
 
@@ -583,13 +443,6 @@ export function MonthlySummary() {
             )}
         </SectionCard>
       )}
-
-      {/* 支出一覧（カテゴリフィルタあり） */}
-      <ExpenseListSection
-        expenses={expenses}
-        onEditExpense={openExpenseDialog}
-        storageKey="summary.month.expensesOpen"
-      />
 
       {/* 支出編集ダイアログ（◀▶で日を移動しながら連続修正できる） */}
       <ExpenseDialog
