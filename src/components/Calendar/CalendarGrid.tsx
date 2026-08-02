@@ -9,6 +9,7 @@ interface CalendarGridProps {
   year: number;
   month: number; // 0-indexed
   expenses: Expense[];
+  allExpenses: Expense[]; // フィルタ前の全支出（特別な支出込みの予算超過判定用）
   specialDates: Set<string>; // 特別な支出がある日付（除外モードでもマーカー表示するためフィルタ前の全支出から算出）
   onDateClick: (dateString: string) => void;
   onWeekBudgetClick: (weekStart: string) => void; // 週予算設定ボタンクリック時
@@ -20,7 +21,7 @@ interface WeekData {
   weekStart: string; // 週開始日（月曜）のYYYY-MM-DD
 }
 
-export function CalendarGrid({ year, month, expenses, specialDates, onDateClick, onWeekBudgetClick }: CalendarGridProps) {
+export function CalendarGrid({ year, month, expenses, allExpenses, specialDates, onDateClick, onWeekBudgetClick }: CalendarGridProps) {
   const days = getMonthDays(year, month);
   const today = new Date();
 
@@ -29,6 +30,22 @@ export function CalendarGrid({ year, month, expenses, specialDates, onDateClick,
   for (const expense of expenses) {
     const current = dailyTotals.get(expense.date) ?? 0;
     dailyTotals.set(expense.date, current + expense.amount);
+  }
+
+  // 予算超過判定用: 特別な支出を含む/除いた日別合計（表示フィルタとは独立）
+  const dailyTotalsWithSpecial = new Map<string, number>();
+  const dailyTotalsWithoutSpecial = new Map<string, number>();
+  for (const expense of allExpenses) {
+    dailyTotalsWithSpecial.set(
+      expense.date,
+      (dailyTotalsWithSpecial.get(expense.date) ?? 0) + expense.amount,
+    );
+    if (!expense.isSpecial) {
+      dailyTotalsWithoutSpecial.set(
+        expense.date,
+        (dailyTotalsWithoutSpecial.get(expense.date) ?? 0) + expense.amount,
+      );
+    }
   }
 
   // 42マスを7日ずつ6週に分割
@@ -73,9 +90,13 @@ export function CalendarGrid({ year, month, expenses, specialDates, onDateClick,
       {displayWeeks.map((week, weekIndex) => {
         // 週合計を計算（前月・次月の日付も含む）
         let weekTotal = 0;
+        let weekTotalWithSpecial = 0;
+        let weekTotalWithoutSpecial = 0;
         for (const date of week.days) {
           const dateStr = toDateString(date);
           weekTotal += dailyTotals.get(dateStr) ?? 0;
+          weekTotalWithSpecial += dailyTotalsWithSpecial.get(dateStr) ?? 0;
+          weekTotalWithoutSpecial += dailyTotalsWithoutSpecial.get(dateStr) ?? 0;
         }
 
         return (
@@ -83,6 +104,8 @@ export function CalendarGrid({ year, month, expenses, specialDates, onDateClick,
             key={weekIndex}
             week={week}
             weekTotal={weekTotal}
+            weekTotalWithSpecial={weekTotalWithSpecial}
+            weekTotalWithoutSpecial={weekTotalWithoutSpecial}
             today={today}
             year={year}
             month={month}
@@ -101,6 +124,8 @@ export function CalendarGrid({ year, month, expenses, specialDates, onDateClick,
 interface WeekSectionProps {
   week: WeekData;
   weekTotal: number;
+  weekTotalWithSpecial: number; // 特別な支出を含む週合計（予算超過判定用）
+  weekTotalWithoutSpecial: number; // 特別な支出を除いた週合計（予算超過判定用）
   today: Date;
   year: number;
   month: number;
@@ -113,6 +138,8 @@ interface WeekSectionProps {
 function WeekSection({
   week,
   weekTotal,
+  weekTotalWithSpecial,
+  weekTotalWithoutSpecial,
   today,
   year,
   month,
@@ -160,6 +187,8 @@ function WeekSection({
       <WeekSummaryRow
           weekStart={week.weekStart}
           weekTotal={weekTotal}
+          weekTotalWithSpecial={weekTotalWithSpecial}
+          weekTotalWithoutSpecial={weekTotalWithoutSpecial}
           weekBudget={weekBudget}
           todaySpent={todaySpent}
           isCurrentWeek={isCurrentWeek}

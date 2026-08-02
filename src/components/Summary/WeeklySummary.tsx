@@ -3,7 +3,6 @@ import {
   Box,
   IconButton,
   Typography,
-  Divider,
   Button,
   Paper,
   Stack,
@@ -59,16 +58,6 @@ export function WeeklySummary() {
     toDateString(weekEnd),
   );
 
-  // 前週のデータを取得
-  const prevWeekStart = new Date(weekStart);
-  prevWeekStart.setDate(weekStart.getDate() - 7);
-  const prevWeekEnd = new Date(prevWeekStart);
-  prevWeekEnd.setDate(prevWeekStart.getDate() + 6);
-  const prevWeekExpenses = useExpensesByDateRange(
-    toDateString(prevWeekStart),
-    toDateString(prevWeekEnd),
-  );
-
   // 週予算を取得
   const weekBudget = useWeekBudget(toDateString(weekStart));
 
@@ -94,11 +83,6 @@ export function WeeklySummary() {
       ? Math.min((weekTotal / weekBudget) * 100, 100)
       : 0;
 
-  // 前週の合計
-  const prevWeekTotal = prevWeekExpenses.reduce((sum, e) => sum + e.amount, 0);
-  const weekDiff = weekTotal - prevWeekTotal;
-  const weekDiffPercent = prevWeekTotal > 0 ? Math.round((weekDiff / prevWeekTotal) * 100) : 0;
-
   // 特別な支出の合計
   const specialTotal = expenses
     .filter((e) => e.isSpecial)
@@ -114,22 +98,7 @@ export function WeeklySummary() {
     (sub) => (foodSubcategoryCounts.get(sub.id) ?? 0) > 0,
   );
 
-  // 平均の分母: 当週なら今日までの日数、過去週なら7
-  const todayStr = toDateString(today);
   const weekEndStr = toDateString(weekEnd);
-  let daysForAverage: number;
-  if (todayStr < toDateString(weekStart)) {
-    // 未来の週
-    daysForAverage = 7;
-  } else if (todayStr >= toDateString(weekStart) && todayStr <= weekEndStr) {
-    // 今週
-    const diffMs = today.getTime() - weekStart.getTime();
-    daysForAverage = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
-  } else {
-    // 過去の週
-    daysForAverage = 7;
-  }
-  const dailyAverage = daysForAverage > 0 ? Math.floor(weekTotal / daysForAverage) : 0;
 
   // 支出の推移（表示中の週を含む直近N週のカテゴリ別比較）
   const [spendingTrendWeeks, setSpendingTrendWeeks] = usePersistedState(
@@ -238,25 +207,6 @@ export function WeeklySummary() {
           </Box>
         )}
 
-        <Divider sx={{ my: 1.5 }} />
-        <Typography variant="body2" color="text.secondary">
-          1日平均: {formatCurrency(dailyAverage)}
-        </Typography>
-
-        {prevWeekTotal > 0 && (
-          <Typography
-            variant="body2"
-            sx={{
-              color: weekDiff > 0 ? 'error.main' : weekDiff < 0 ? 'success.main' : 'text.secondary',
-              mt: 0.5,
-            }}
-          >
-            前週比: {weekDiff > 0 ? '+' : ''}
-            {formatCurrency(weekDiff)} ({weekDiff > 0 ? '+' : ''}
-            {weekDiffPercent}%)
-          </Typography>
-        )}
-
         {hasFoodSubcategoryCounts && (
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
             {FOOD_SUBCATEGORIES.map(
@@ -275,6 +225,23 @@ export function WeeklySummary() {
         )}
       </Paper>
 
+      {/* 支出一覧（参照頻度が高いため上部に配置） */}
+      <ExpenseListSection
+        expenses={expenses}
+        onEditExpense={openExpenseDialog}
+        storageKey="summary.week.expensesOpen"
+        defaultOpen
+      />
+
+      {/* 日別棒グラフ */}
+      <SectionCard
+        title="日別の支出"
+        storageKey="summary.week.dailyOpen"
+        defaultOpen
+      >
+        <DailyBarChart dailyTotals={dailyTotals} expenses={expenses} />
+      </SectionCard>
+
       {/* カテゴリ別ドーナツチャート */}
       <SectionCard
         title="カテゴリ別内訳"
@@ -286,15 +253,6 @@ export function WeeklySummary() {
           total={weekTotal}
           foodSubcategoryTotals={foodSubcategoryTotals}
         />
-      </SectionCard>
-
-      {/* 日別棒グラフ */}
-      <SectionCard
-        title="日別の支出"
-        storageKey="summary.week.dailyOpen"
-        defaultOpen
-      >
-        <DailyBarChart dailyTotals={dailyTotals} expenses={expenses} />
       </SectionCard>
 
       {/* 支出の推移（複数週のカテゴリ別比較） */}
@@ -331,13 +289,6 @@ export function WeeklySummary() {
           <PeriodTrendChart data={spendingTrend} />
         </SectionCard>
       )}
-
-      {/* 支出一覧 */}
-      <ExpenseListSection
-        expenses={expenses}
-        onEditExpense={openExpenseDialog}
-        storageKey="summary.week.expensesOpen"
-      />
 
       {/* 支出編集ダイアログ（◀▶で日を移動しながら連続修正できる） */}
       <ExpenseDialog

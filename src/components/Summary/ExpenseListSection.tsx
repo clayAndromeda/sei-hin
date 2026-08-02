@@ -21,6 +21,8 @@ interface ExpenseListSectionProps {
   onEditExpense?: (expense: Expense) => void;
   // 開閉状態の永続化キー（月次・週次で別々に保持する）
   storageKey?: string;
+  // 初期表示で開いておくか
+  defaultOpen?: boolean;
 }
 
 type CategoryFilter = 'all' | CategoryId;
@@ -47,6 +49,7 @@ export function ExpenseListSection({
   expenses,
   onEditExpense,
   storageKey = 'summary.expensesOpen',
+  defaultOpen = false,
 }: ExpenseListSectionProps) {
   const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>('all');
   const [specialOnly, setSpecialOnly] = useState(false);
@@ -67,6 +70,7 @@ export function ExpenseListSection({
       title="支出一覧"
       summary={`${expenses.length}件・${formatCurrency(allTotal)}`}
       storageKey={storageKey}
+      defaultOpen={defaultOpen}
     >
         {/* カテゴリフィルタ */}
         <Box sx={{ px: 2, py: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5, alignItems: 'center' }}>

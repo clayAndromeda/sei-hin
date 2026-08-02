@@ -1,8 +1,10 @@
 import { useState } from 'react';
-import { Box, IconButton, Typography, Tooltip, useMediaQuery, useTheme, Paper, Divider, FormControlLabel, Switch } from '@mui/material';
+import { Box, IconButton, Typography, Tooltip, useMediaQuery, useTheme, Paper, Divider, ToggleButton } from '@mui/material';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
 import { CalendarGrid } from './CalendarGrid';
 import { ExpenseDialog } from '../ExpenseDialog/ExpenseDialog';
 import { WeekBudgetDialog } from './WeekBudgetDialog';
@@ -107,27 +109,25 @@ export function CalendarView() {
     >
       {/* 左側: カレンダーエリア */}
       <Box sx={{ flex: { md: '1 1 auto' }, maxWidth: { md: 700 } }}>
-        {/* 月切り替えヘッダー */}
+        {/* 月切り替え + 特別な支出フィルタ（1行に統合） */}
         <Box
           sx={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             mb: { xs: 1, sm: 2 },
-            flexWrap: { xs: 'wrap', sm: 'nowrap' },
-            gap: { xs: 1, sm: 0 },
           }}
         >
           {/* 月切り替え */}
-          <Box sx={{ display: 'flex', alignItems: 'center', flex: { xs: '1 1 100%', sm: '0 0 auto' } }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <IconButton onClick={goToPrevMonth} size="small">
               <ChevronLeftIcon />
             </IconButton>
             <Typography
               variant="h6"
               sx={{
-                mx: { xs: 1, sm: 2 },
-                minWidth: { xs: 100, sm: 120 },
+                mx: { xs: 0.5, sm: 2 },
+                minWidth: { xs: 96, sm: 120 },
                 textAlign: 'center',
                 fontSize: { xs: '1rem', sm: '1.25rem' },
               }}
@@ -144,43 +144,31 @@ export function CalendarView() {
             </Tooltip>
           </Box>
 
+          {/* 特別な支出フィルタ（⭐️トグル） */}
+          <Tooltip title="特別な支出を除いて表示">
+            <ToggleButton
+              value="excludeSpecial"
+              selected={excludeSpecial}
+              onChange={() => setExcludeSpecial(!excludeSpecial)}
+              size="small"
+              sx={{ px: 1, py: 0.5, textTransform: 'none', lineHeight: 1 }}
+            >
+              {excludeSpecial ? (
+                <StarIcon sx={{ fontSize: '1rem', mr: 0.5 }} />
+              ) : (
+                <StarBorderIcon sx={{ fontSize: '1rem', mr: 0.5 }} />
+              )}
+              <Typography variant="caption">特別を除く</Typography>
+            </ToggleButton>
+          </Tooltip>
         </Box>
 
-        {/* 特別な支出フィルタ */}
-        <Box sx={{ display: 'flex', justifyContent: 'center', mb: { xs: 1, sm: 2 } }}>
-          <FormControlLabel
-            control={
-              <Switch
-                checked={excludeSpecial}
-                onChange={(e) => setExcludeSpecial(e.target.checked)}
-                size="small"
-              />
-            }
-            label="特別な支出を除く"
-            sx={{ mb: 0 }}
-          />
-        </Box>
-
-        {/* 月合計（モバイルのみ表示） */}
-        {!isDesktop && (
-          <Typography
-            variant="body1"
-            align="center"
-            sx={{
-              mb: { xs: 1, sm: 2 },
-              fontWeight: 'bold',
-              fontSize: { xs: '0.95rem', sm: '1rem' },
-            }}
-          >
-            今月合計: {formatCurrency(monthTotal)}
-          </Typography>
-        )}
-
-        {/* 月予算パネル（モバイルのみ。PC版はサマリーパネル内に表示） */}
+        {/* 月予算パネル（今月合計を含む。モバイルのみ。PC版はサマリーパネル内に表示） */}
         {!isDesktop && (
           <Box sx={{ mb: { xs: 1, sm: 2 } }}>
             <MonthBudgetPanel
               budget={monthBudget}
+              monthTotal={monthTotal}
               variableSpent={monthTotalForBudget}
               fixedCostTotal={fixedCostTotal}
               daysElapsed={daysForAverage}
@@ -196,6 +184,7 @@ export function CalendarView() {
           year={year}
           month={month}
           expenses={filteredExpenses}
+          allExpenses={allExpenses}
           specialDates={specialDates}
           onDateClick={(dateStr) => setSelectedDate(dateStr)}
           onWeekBudgetClick={(weekStart) => setSelectedWeekStart(weekStart)}
@@ -212,10 +201,11 @@ export function CalendarView() {
 
             <Divider sx={{ mb: 2 }} />
 
-            {/* 月予算パネル */}
+            {/* 月予算パネル（今月合計を含む） */}
             <Box sx={{ mb: 2 }}>
               <MonthBudgetPanel
                 budget={monthBudget}
+                monthTotal={monthTotal}
                 variableSpent={monthTotalForBudget}
                 fixedCostTotal={fixedCostTotal}
                 daysElapsed={daysForAverage}
@@ -223,16 +213,6 @@ export function CalendarView() {
                 isCurrentMonth={isCurrentMonth}
                 onEditBudget={() => setMonthBudgetDialogOpen(true)}
               />
-            </Box>
-
-            {/* 月合計・平均 */}
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="h5" fontWeight="bold" color="primary.main">
-                {formatCurrency(monthTotal)}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                月合計
-              </Typography>
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                 1日平均: {formatCurrency(dailyAverage)}
               </Typography>
