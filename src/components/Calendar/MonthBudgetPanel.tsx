@@ -13,7 +13,6 @@ import { calcMonthBudgetStatus } from '../../utils/budget';
 
 interface MonthBudgetPanelProps {
   budget: number | null; // 月予算（未設定ならnull）
-  monthTotal: number; // 今月合計（表示中のフィルタ適用後、パネルに埋め込んで表示）
   variableSpent: number; // 変動費合計（特別な支出も含む）
   fixedCostTotal: number; // 固定費合計
   daysElapsed: number; // 経過日数
@@ -23,10 +22,10 @@ interface MonthBudgetPanelProps {
 }
 
 // カレンダービュー用の月予算パネル（コンパクト表示）
-// 今月合計と予算残額を並べて表示し、今のペースで予算を超えそうな場合はバーが警告色になる
+// 合計（固定費+変動費）と内訳、予算残額を表示し、
+// 今のペースで予算を超えそうな場合はバーが警告色になる
 export function MonthBudgetPanel({
   budget,
-  monthTotal,
   variableSpent,
   fixedCostTotal,
   daysElapsed,
@@ -34,29 +33,37 @@ export function MonthBudgetPanel({
   isCurrentMonth,
   onEditBudget,
 }: MonthBudgetPanelProps) {
+  const totalSpent = variableSpent + fixedCostTotal;
+  const breakdownText = `変動 ${formatCurrency(variableSpent)}・固定 ${formatCurrency(fixedCostTotal)}`;
+
   if (budget === null) {
     return (
       <Paper
         variant="outlined"
-        sx={{
-          px: 1.5,
-          py: 0.5,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}
+        sx={{ px: 1.5, py: 0.75 }}
       >
-        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75 }}>
-          <Typography variant="caption" color="text.secondary">
-            今月合計
-          </Typography>
-          <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
-            {formatCurrency(monthTotal)}
-          </Typography>
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75 }}>
+            <Typography variant="caption" color="text.secondary">
+              合計
+            </Typography>
+            <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
+              {formatCurrency(totalSpent)}
+            </Typography>
+          </Box>
+          <Button size="small" onClick={onEditBudget}>
+            予算を設定
+          </Button>
         </Box>
-        <Button size="small" onClick={onEditBudget}>
-          予算を設定
-        </Button>
+        <Typography variant="caption" color="text.secondary">
+          {breakdownText}
+        </Typography>
       </Paper>
     );
   }
@@ -79,7 +86,7 @@ export function MonthBudgetPanel({
         ...(status.isOver && { borderColor: 'error.main' }),
       }}
     >
-      {/* 今月合計 + 残額（or 超過額）+ 編集ボタンを1行に */}
+      {/* 合計 + 残額（or 超過額）+ 編集ボタンを1行に */}
       <Box
         sx={{
           display: 'flex',
@@ -90,10 +97,10 @@ export function MonthBudgetPanel({
         <Box sx={{ display: 'flex', gap: 2.5 }}>
           <Box>
             <Typography variant="caption" color="text.secondary">
-              今月合計
+              合計
             </Typography>
             <Typography variant="h6" fontWeight="bold" sx={{ lineHeight: 1.2 }}>
-              {formatCurrency(monthTotal)}
+              {formatCurrency(totalSpent)}
             </Typography>
           </Box>
           <Box>
@@ -127,6 +134,11 @@ export function MonthBudgetPanel({
         </Tooltip>
       </Box>
 
+      {/* 変動費・固定費の内訳 */}
+      <Typography variant="caption" color="text.secondary">
+        {breakdownText}
+      </Typography>
+
       {/* 消化状況バー（超えそうなペースなら警告色、超過なら赤） */}
       <LinearProgress
         variant="determinate"
@@ -135,12 +147,12 @@ export function MonthBudgetPanel({
         sx={{ height: 6, borderRadius: 3, mt: 0.5 }}
       />
 
-      {/* 補足情報を1行に: 当月・予算内なら日割り目安、それ以外は支出合計 */}
+      {/* 日割り目安と月予算を1行に */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.25 }}>
         <Typography variant="caption" color="text.secondary">
           {isCurrentMonth && !status.isOver && status.dailyAllowance !== null
             ? `残り${status.remainingDays}日・1日 ${formatCurrency(status.dailyAllowance)}`
-            : `支出 ${formatCurrency(status.spent)}`}
+            : ''}
         </Typography>
         <Typography variant="caption" color="text.secondary">
           月予算 {formatCurrency(budget)}

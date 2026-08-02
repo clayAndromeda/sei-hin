@@ -168,7 +168,6 @@ export function CalendarView() {
           <Box sx={{ mb: { xs: 1, sm: 2 } }}>
             <MonthBudgetPanel
               budget={monthBudget}
-              monthTotal={monthTotal}
               variableSpent={monthTotalForBudget}
               fixedCostTotal={fixedCostTotal}
               daysElapsed={daysForAverage}
@@ -205,7 +204,6 @@ export function CalendarView() {
             <Box sx={{ mb: 2 }}>
               <MonthBudgetPanel
                 budget={monthBudget}
-                monthTotal={monthTotal}
                 variableSpent={monthTotalForBudget}
                 fixedCostTotal={fixedCostTotal}
                 daysElapsed={daysForAverage}
