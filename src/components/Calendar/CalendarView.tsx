@@ -144,19 +144,27 @@ export function CalendarView() {
             </Tooltip>
           </Box>
 
-          {/* 特別な支出フィルタ（⭐️トグル） */}
+          {/* 特別な支出フィルタ（⭐️トグル。特別な支出のマーカーと同じwarning色） */}
           <Tooltip title="特別な支出を除いて表示">
             <ToggleButton
               value="excludeSpecial"
               selected={excludeSpecial}
               onChange={() => setExcludeSpecial(!excludeSpecial)}
               size="small"
-              sx={{ px: 1, py: 0.5, textTransform: 'none', lineHeight: 1 }}
+              color="warning"
+              sx={{
+                px: 1,
+                py: 0.5,
+                textTransform: 'none',
+                lineHeight: 1,
+                borderColor: 'warning.main',
+                '&.Mui-selected': { borderColor: 'warning.main' },
+              }}
             >
               {excludeSpecial ? (
-                <StarIcon sx={{ fontSize: '1rem', mr: 0.5 }} />
+                <StarIcon sx={{ fontSize: '1rem', mr: 0.5, color: 'warning.main' }} />
               ) : (
-                <StarBorderIcon sx={{ fontSize: '1rem', mr: 0.5 }} />
+                <StarBorderIcon sx={{ fontSize: '1rem', mr: 0.5, color: 'warning.main' }} />
               )}
               <Typography variant="caption">特別を除く</Typography>
             </ToggleButton>
@@ -168,7 +176,6 @@ export function CalendarView() {
           <Box sx={{ mb: { xs: 1, sm: 2 } }}>
             <MonthBudgetPanel
               budget={monthBudget}
-              monthTotal={monthTotal}
               variableSpent={monthTotalForBudget}
               fixedCostTotal={fixedCostTotal}
               daysElapsed={daysForAverage}
@@ -205,7 +212,6 @@ export function CalendarView() {
             <Box sx={{ mb: 2 }}>
               <MonthBudgetPanel
                 budget={monthBudget}
-                monthTotal={monthTotal}
                 variableSpent={monthTotalForBudget}
                 fixedCostTotal={fixedCostTotal}
                 daysElapsed={daysForAverage}
