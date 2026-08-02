@@ -143,12 +143,13 @@ function App() {
         </Toolbar>
       </AppBar>
 
-      {/* メインコンテンツ */}
+      {/* メインコンテンツ
+          注意: ここにoverflow:autoを付けるとwindowスクロールと分離して
+          子孫のposition:stickyが効かなくなる（スクロールはwindowに任せる） */}
       <Box
         sx={{
           flexGrow: 1,
           pb: { xs: '128px', md: 0 },
-          overflow: 'auto',
         }}
       >
         {activeTab === 0 && <CalendarView />}

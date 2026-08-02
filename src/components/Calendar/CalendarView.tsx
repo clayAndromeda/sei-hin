@@ -171,9 +171,20 @@ export function CalendarView() {
           </Tooltip>
         </Box>
 
-        {/* 月予算パネル（今月合計を含む。モバイルのみ。PC版はサマリーパネル内に表示） */}
+        {/* 月予算パネル（モバイルのみ。PC版はサマリーパネル内に表示）
+            スクロールしても見えるように画面上部に固定表示する */}
         {!isDesktop && (
-          <Box sx={{ mb: { xs: 1, sm: 2 } }}>
+          <Box
+            sx={{
+              position: 'sticky',
+              top: 0,
+              zIndex: 2,
+              backgroundColor: 'background.default',
+              pt: 0.5,
+              mt: -0.5,
+              pb: { xs: 1, sm: 2 },
+            }}
+          >
             <MonthBudgetPanel
               budget={monthBudget}
               variableSpent={monthTotalForBudget}
