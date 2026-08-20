@@ -1,6 +1,7 @@
 import { db } from './db';
 import { downloadFile, uploadFile } from './dropbox';
 import type {
+  DayMemo,
   Expense,
   SeihinData,
   WeekBudget,
@@ -74,6 +75,24 @@ export function mergeMonthBudgets(
     const existing = merged.get(mb.yearMonth);
     if (!existing || mb.updatedAt > existing.updatedAt) {
       merged.set(mb.yearMonth, mb);
+    }
+  }
+
+  return Array.from(merged.values());
+}
+
+// 日別メモのマージロジック: dateをキーにupdatedAtで新しい方を採用
+export function mergeDayMemos(local: DayMemo[], remote: DayMemo[]): DayMemo[] {
+  const merged = new Map<string, DayMemo>();
+
+  for (const m of local) {
+    merged.set(m.date, m);
+  }
+
+  for (const m of remote) {
+    const existing = merged.get(m.date);
+    if (!existing || m.updatedAt > existing.updatedAt) {
+      merged.set(m.date, m);
     }
   }
 
@@ -223,6 +242,7 @@ export async function performSync(): Promise<void> {
     const localDefaultMB = await getLocalDefaultMonthBudget();
     const localFixedCostItems = await db.fixedCostItems.toArray();
     const localFixedCostChanges = await db.fixedCostAmountChanges.toArray();
+    const localDayMemos = await db.dayMemos.toArray();
 
     // 2. Dropboxからダウンロード
     const downloaded = await downloadFile();
@@ -234,6 +254,7 @@ export async function performSync(): Promise<void> {
     let mergedDefaultMB: DefaultMonthBudgetSync | null;
     let mergedFixedCostItems: FixedCostItem[];
     let mergedFixedCostChanges: FixedCostAmountChange[];
+    let mergedDayMemos: DayMemo[];
     let rev: string | undefined;
 
     if (downloaded) {
@@ -249,6 +270,7 @@ export async function performSync(): Promise<void> {
       const remoteDefaultMB = downloaded.data.defaultMonthBudget ?? null;
       const remoteFixedCostItems = downloaded.data.fixedCostItems ?? [];
       const remoteFixedCostChanges = downloaded.data.fixedCostAmountChanges ?? [];
+      const remoteDayMemos = downloaded.data.dayMemos ?? [];
 
       // 3. マージ
       mergedExpenses = mergeExpenses(localExpenses, remoteExpenses);
@@ -264,6 +286,7 @@ export async function performSync(): Promise<void> {
         localFixedCostChanges,
         remoteFixedCostChanges,
       );
+      mergedDayMemos = mergeDayMemos(localDayMemos, remoteDayMemos);
       rev = downloaded.rev;
     } else {
       // Dropboxにファイルがない場合はローカルのみ
@@ -274,6 +297,7 @@ export async function performSync(): Promise<void> {
       mergedDefaultMB = localDefaultMB;
       mergedFixedCostItems = localFixedCostItems;
       mergedFixedCostChanges = localFixedCostChanges;
+      mergedDayMemos = localDayMemos;
     }
 
     // 4. ローカルに保存（一括置換）
@@ -285,6 +309,7 @@ export async function performSync(): Promise<void> {
         db.monthBudgets,
         db.fixedCostItems,
         db.fixedCostAmountChanges,
+        db.dayMemos,
       ],
       async () => {
         await db.expenses.clear();
@@ -297,6 +322,8 @@ export async function performSync(): Promise<void> {
         await db.fixedCostItems.bulkAdd(mergedFixedCostItems);
         await db.fixedCostAmountChanges.clear();
         await db.fixedCostAmountChanges.bulkAdd(mergedFixedCostChanges);
+        await db.dayMemos.clear();
+        await db.dayMemos.bulkAdd(mergedDayMemos);
       },
     );
     if (mergedDefaultWB) {
@@ -308,7 +335,7 @@ export async function performSync(): Promise<void> {
 
     // 5. Dropboxにアップロード
     const dataToUpload: SeihinData = {
-      version: 6,
+      version: 7,
       updatedAt: new Date().toISOString(),
       expenses: mergedExpenses,
       weekBudgets: mergedWeekBudgets,
@@ -317,6 +344,7 @@ export async function performSync(): Promise<void> {
       fixedCostAmountChanges: mergedFixedCostChanges,
       defaultMonthBudget: mergedDefaultMB ?? undefined,
       monthBudgets: mergedMonthBudgets,
+      dayMemos: mergedDayMemos,
     };
 
     try {
@@ -337,6 +365,7 @@ export async function performSync(): Promise<void> {
           const retryRemoteDefaultMB = retryDownload.data.defaultMonthBudget ?? null;
           const retryRemoteFCI = retryDownload.data.fixedCostItems ?? [];
           const retryRemoteFCC = retryDownload.data.fixedCostAmountChanges ?? [];
+          const retryRemoteDayMemos = retryDownload.data.dayMemos ?? [];
 
           const retryMergedExpenses = mergeExpenses(mergedExpenses, retryRemote);
           const retryMergedWB = mergeWeekBudgets(mergedWeekBudgets, retryRemoteWB);
@@ -351,6 +380,7 @@ export async function performSync(): Promise<void> {
             mergedFixedCostChanges,
             retryRemoteFCC,
           );
+          const retryMergedDayMemos = mergeDayMemos(mergedDayMemos, retryRemoteDayMemos);
 
           await db.transaction(
             'rw',
@@ -360,6 +390,7 @@ export async function performSync(): Promise<void> {
               db.monthBudgets,
               db.fixedCostItems,
               db.fixedCostAmountChanges,
+              db.dayMemos,
             ],
             async () => {
               await db.expenses.clear();
@@ -372,6 +403,8 @@ export async function performSync(): Promise<void> {
               await db.fixedCostItems.bulkAdd(retryMergedFCI);
               await db.fixedCostAmountChanges.clear();
               await db.fixedCostAmountChanges.bulkAdd(retryMergedFCC);
+              await db.dayMemos.clear();
+              await db.dayMemos.bulkAdd(retryMergedDayMemos);
             },
           );
           if (retryMergedDefaultWB) {
@@ -382,7 +415,7 @@ export async function performSync(): Promise<void> {
           }
 
           const retryData: SeihinData = {
-            version: 6,
+            version: 7,
             updatedAt: new Date().toISOString(),
             expenses: retryMergedExpenses,
             weekBudgets: retryMergedWB,
@@ -391,6 +424,7 @@ export async function performSync(): Promise<void> {
             fixedCostAmountChanges: retryMergedFCC,
             defaultMonthBudget: retryMergedDefaultMB ?? undefined,
             monthBudgets: retryMergedMB,
+            dayMemos: retryMergedDayMemos,
           };
           await uploadFile(retryData, retryDownload.rev);
         }
@@ -431,6 +465,13 @@ export async function performSync(): Promise<void> {
       .map((c) => c.id);
     if (deletedFCCIds.length > 0) {
       await db.fixedCostAmountChanges.bulkDelete(deletedFCCIds);
+    }
+
+    const deletedDayMemoKeys = mergedDayMemos
+      .filter((m) => m.deleted)
+      .map((m) => m.date);
+    if (deletedDayMemoKeys.length > 0) {
+      await db.dayMemos.bulkDelete(deletedDayMemoKeys);
     }
 
     // 7. 最終同期日時を保存

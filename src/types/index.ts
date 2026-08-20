@@ -12,6 +12,14 @@ export interface Expense {
   subcategory?: string; // サブカテゴリID（現状は食費のみ。'snack' | 'eating_out'）
 }
 
+// 1日ごとの自由記入メモ（支出とは独立。カレンダーにマークを表示する）
+export interface DayMemo {
+  date: string; // "YYYY-MM-DD" 形式（1日1件。主キー）
+  text: string; // メモ本文（自由入力）
+  updatedAt: string; // ISO 8601 datetime（同期マージ用）
+  deleted?: boolean; // 削除フラグ（同期用）
+}
+
 // デフォルト週予算の同期用データ
 export interface DefaultWeekBudgetSync {
   budget: number;
@@ -26,7 +34,7 @@ export interface DefaultMonthBudgetSync {
 
 // Dropboxに保存するデータ全体
 export interface SeihinData {
-  version: 1 | 2 | 3 | 4 | 5 | 6;
+  version: 1 | 2 | 3 | 4 | 5 | 6 | 7;
   updatedAt: string; // ISO 8601 datetime
   expenses: Expense[];
   weekBudgets?: WeekBudget[]; // v3で追加（後方互換のためoptional）
@@ -35,6 +43,7 @@ export interface SeihinData {
   fixedCostAmountChanges?: FixedCostAmountChange[]; // v4で追加（後方互換のためoptional）
   defaultMonthBudget?: DefaultMonthBudgetSync; // v5で追加（後方互換のためoptional）
   monthBudgets?: MonthBudget[]; // v6で追加（後方互換のためoptional）
+  dayMemos?: DayMemo[]; // v7で追加（後方互換のためoptional）
 }
 
 // メタデータ（IndexedDB用）

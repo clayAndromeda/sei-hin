@@ -9,6 +9,13 @@
 - `updateExpense(id, amount, memo, category, isSpecial, subcategory?)`: 更新
 - `deleteExpense(id)`: 論理削除
 
+## hooks/useDayMemo.ts
+
+- `useDayMemo(dateString)`: 特定日のメモ本文をリアクティブ取得（未設定・削除済みは空文字）
+- `useDayMemosByDateRange(start, end)`: 範囲指定でメモ一覧を取得（削除済み・空メモは除外。カレンダーのマーク表示用）
+- `setDayMemo(dateString, text)`: メモを保存（空文字なら論理削除。内容が同じなら書き込まない）
+- `deleteDayMemo(dateString)`: メモを論理削除
+
 ## hooks/useSync.ts
 
 - `triggerSync()`: 手動同期実行
@@ -54,9 +61,10 @@
 
 ## services/sync.ts
 
-- `performSync()`: 同期実行（expenses + weekBudgets + monthBudgets + defaultWeekBudget + defaultMonthBudget + 固定費、排他制御あり）
+- `performSync()`: 同期実行（expenses + weekBudgets + monthBudgets + defaultWeekBudget + defaultMonthBudget + 固定費 + dayMemos、排他制御あり）
 - `mergeExpenses(local, remote)`: expensesマージロジック（ID基準、updatedAt比較）
 - `mergeWeekBudgets(local, remote)`: weekBudgetsマージロジック（weekStart基準、updatedAt比較）
 - `mergeMonthBudgets(local, remote)`: monthBudgetsマージロジック（yearMonth基準、updatedAt比較）
 - `mergeDefaultWeekBudget(local, remote)`: defaultWeekBudgetマージ（updatedAt比較）
 - `mergeDefaultMonthBudget(local, remote)`: defaultMonthBudgetマージ（updatedAt比較）
+- `mergeDayMemos(local, remote)`: dayMemosマージロジック（date基準、updatedAt比較）
