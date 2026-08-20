@@ -7,8 +7,10 @@ import {
   mergeDefaultMonthBudget,
   mergeFixedCostItems,
   mergeFixedCostAmountChanges,
+  mergeDayMemos,
 } from './sync';
 import type {
+  DayMemo,
   Expense,
   WeekBudget,
   MonthBudget,
@@ -584,6 +586,76 @@ describe('mergeFixedCostAmountChanges', () => {
       }),
     ];
     const result = mergeFixedCostAmountChanges(local, remote);
+    expect(result[0].deleted).toBe(true);
+  });
+});
+
+// テスト用のDayMemoヘルパー
+function createDayMemo(overrides: Partial<DayMemo> = {}): DayMemo {
+  return {
+    date: '2026-02-14',
+    text: 'メモ',
+    updatedAt: '2026-02-14T00:00:00Z',
+    ...overrides,
+  };
+}
+
+describe('mergeDayMemos', () => {
+  it('両方空の場合、空配列を返す', () => {
+    expect(mergeDayMemos([], [])).toHaveLength(0);
+  });
+
+  it('ローカルのみ・リモートのみのメモは両方残る', () => {
+    const local = [createDayMemo({ date: '2026-02-14' })];
+    const remote = [createDayMemo({ date: '2026-02-15' })];
+    const result = mergeDayMemos(local, remote);
+    expect(result).toHaveLength(2);
+    expect(result.map((m) => m.date).sort()).toEqual(['2026-02-14', '2026-02-15']);
+  });
+
+  it('同一日付でリモートが新しい場合、リモートを採用する', () => {
+    const local = [
+      createDayMemo({ text: 'ローカル', updatedAt: '2026-02-14T10:00:00Z' }),
+    ];
+    const remote = [
+      createDayMemo({ text: 'リモート', updatedAt: '2026-02-14T11:00:00Z' }),
+    ];
+    const result = mergeDayMemos(local, remote);
+    expect(result).toHaveLength(1);
+    expect(result[0].text).toBe('リモート');
+  });
+
+  it('同一日付でローカルが新しい場合、ローカルを採用する', () => {
+    const local = [
+      createDayMemo({ text: 'ローカル', updatedAt: '2026-02-14T12:00:00Z' }),
+    ];
+    const remote = [
+      createDayMemo({ text: 'リモート', updatedAt: '2026-02-14T11:00:00Z' }),
+    ];
+    const result = mergeDayMemos(local, remote);
+    expect(result).toHaveLength(1);
+    expect(result[0].text).toBe('ローカル');
+  });
+
+  it('同一日付でupdatedAtが同じ場合、ローカルを採用する', () => {
+    const local = [
+      createDayMemo({ text: 'ローカル', updatedAt: '2026-02-14T11:00:00Z' }),
+    ];
+    const remote = [
+      createDayMemo({ text: 'リモート', updatedAt: '2026-02-14T11:00:00Z' }),
+    ];
+    const result = mergeDayMemos(local, remote);
+    expect(result).toHaveLength(1);
+    expect(result[0].text).toBe('ローカル');
+  });
+
+  it('削除フラグが新しい場合、削除済みとして残る（物理削除は同期後）', () => {
+    const local = [createDayMemo({ updatedAt: '2026-02-14T10:00:00Z' })];
+    const remote = [
+      createDayMemo({ text: '', deleted: true, updatedAt: '2026-02-14T11:00:00Z' }),
+    ];
+    const result = mergeDayMemos(local, remote);
+    expect(result).toHaveLength(1);
     expect(result[0].deleted).toBe(true);
   });
 });

@@ -1,4 +1,5 @@
 import { ButtonBase, Typography } from '@mui/material';
+import StickyNote2Icon from '@mui/icons-material/StickyNote2';
 import { formatCurrency } from '../../utils/format';
 import { isFutureDate } from '../../utils/date';
 
@@ -8,10 +9,19 @@ interface DayCellProps {
   isToday: boolean;
   otherMonth?: boolean; // 表示中の月以外の日付
   hasSpecial?: boolean; // 特別な支出がある日（除外モードでも表示する）
+  hasMemo?: boolean; // その日のメモがある日
   onClick: () => void;
 }
 
-export function DayCell({ date, amount, isToday, otherMonth = false, hasSpecial = false, onClick }: DayCellProps) {
+export function DayCell({
+  date,
+  amount,
+  isToday,
+  otherMonth = false,
+  hasSpecial = false,
+  hasMemo = false,
+  onClick,
+}: DayCellProps) {
   const future = isFutureDate(date);
 
   return (
@@ -38,6 +48,18 @@ export function DayCell({ date, amount, isToday, otherMonth = false, hasSpecial 
         },
       }}
     >
+      {hasMemo && (
+        <StickyNote2Icon
+          aria-label="メモあり"
+          sx={{
+            position: 'absolute',
+            top: 2,
+            left: 3,
+            fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.8rem' },
+            color: isToday ? 'inherit' : 'info.main',
+          }}
+        />
+      )}
       {hasSpecial && (
         <Typography
           component="span"

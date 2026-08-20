@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -35,6 +35,7 @@ import { formatCurrency } from '../../utils/format';
 import { CATEGORIES, DEFAULT_CATEGORY } from '../../constants/categories';
 import { FOOD_SUBCATEGORIES } from '../../constants/foodSubcategories';
 import { useMemoSuggestions } from '../../hooks/useMemoSuggestions';
+import { useDayMemo, setDayMemo } from '../../hooks/useDayMemo';
 import { useDialogHistory } from '../../hooks/useDialogHistory';
 import { addDaysToDateString, WEEKDAY_LABELS } from '../../utils/date';
 import type { Expense } from '../../types';
@@ -68,8 +69,28 @@ export function ExpenseDialog({
   const [isSpecial, setIsSpecial] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
+  // その日の自由記入メモ（支出とは独立。入力があるとカレンダーにマークが付く）
+  const savedDayMemo = useDayMemo(date);
+  // 未保存の入力がある日付（nullなら保存待ちの入力はない）と、その入力内容
+  const editingMemoDateRef = useRef<string | null>(null);
+  const dayMemoTextRef = useRef('');
+
+  // 未保存のメモを保存する（フォーカスが外れたとき・日移動・ダイアログを閉じるとき）
+  const flushDayMemo = useCallback(() => {
+    const targetDate = editingMemoDateRef.current;
+    if (targetDate === null) return;
+    editingMemoDateRef.current = null;
+    void setDayMemo(targetDate, dayMemoTextRef.current);
+  }, []);
+
+  // 閉じる前に未保存のメモを保存する
+  const handleClose = useCallback(() => {
+    flushDayMemo();
+    onClose();
+  }, [flushDayMemo, onClose]);
+
   // ブラウザの「戻る」でもダイアログを閉じられるようにする
-  useDialogHistory(open, onClose);
+  useDialogHistory(open, handleClose);
 
   const parsedAmountForSuggestion = parseInt(amount, 10) || 0;
   const suggestions = useMemoSuggestions(open, parsedAmountForSuggestion);
@@ -84,8 +105,10 @@ export function ExpenseDialog({
       setSubcategory('');
       setIsSpecial(false);
       setEditingId(null);
+      // 閉じ方によらず未保存のメモを取りこぼさない（保存済みなら何もしない）
+      flushDayMemo();
     }
-  }, [open]);
+  }, [open, flushDayMemo]);
 
   // ダイアログを開いたときに編集対象が指定されていればプリセット
   useEffect(() => {
@@ -162,6 +185,7 @@ export function ExpenseDialog({
 
   // 前日/翌日へ移動。別の日の記録を編集中のままにしないよう、フォームをリセットする
   const handleNavigateDate = (days: number) => {
+    flushDayMemo();
     handleCancel();
     onNavigateDate?.(addDaysToDateString(date, days));
   };
@@ -183,7 +207,7 @@ export function ExpenseDialog({
   return (
     <Dialog
       open={open}
-      onClose={onClose}
+      onClose={handleClose}
       fullWidth
       maxWidth="sm"
       fullScreen={fullScreen}
@@ -198,7 +222,7 @@ export function ExpenseDialog({
           fontSize: { xs: '1.05rem', sm: '1.25rem' },
         }}
       >
-        <IconButton onClick={onClose} size="small" aria-label="閉じる" sx={{ flexShrink: 0 }}>
+        <IconButton onClick={handleClose} size="small" aria-label="閉じる" sx={{ flexShrink: 0 }}>
           <CloseIcon />
         </IconButton>
         <Box
@@ -369,6 +393,28 @@ export function ExpenseDialog({
             </Typography>
           </>
         )}
+
+        {/* その日のメモ（自由入力。入力があるとカレンダーにマークが付く） */}
+        <Divider sx={{ mt: 2 }}>
+          <Typography variant="caption">この日のメモ</Typography>
+        </Divider>
+        <TextField
+          // 非制御にして入力ごとの再レンダリングを避ける。日付の切り替えや、
+          // 保存・同期でDBの値が変わったときはkeyの変化で入力欄を作り直して反映する
+          key={`${date}:${savedDayMemo}`}
+          defaultValue={savedDayMemo}
+          onChange={(e) => {
+            editingMemoDateRef.current = date;
+            dayMemoTextRef.current = e.target.value;
+          }}
+          onBlur={flushDayMemo}
+          placeholder="この日のできごとなどを自由に記録できます"
+          multiline
+          minRows={2}
+          fullWidth
+          size="small"
+          sx={{ mt: 1, mb: 1 }}
+        />
       </DialogContent>
     </Dialog>
   );

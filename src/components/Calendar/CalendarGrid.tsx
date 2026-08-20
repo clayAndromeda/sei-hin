@@ -11,6 +11,7 @@ interface CalendarGridProps {
   expenses: Expense[];
   allExpenses: Expense[]; // フィルタ前の全支出（特別な支出込みの予算超過判定用）
   specialDates: Set<string>; // 特別な支出がある日付（除外モードでもマーカー表示するためフィルタ前の全支出から算出）
+  memoDates: Set<string>; // その日のメモがある日付（マーカー表示用）
   onDateClick: (dateString: string) => void;
   onWeekBudgetClick: (weekStart: string) => void; // 週予算設定ボタンクリック時
 }
@@ -21,7 +22,7 @@ interface WeekData {
   weekStart: string; // 週開始日（月曜）のYYYY-MM-DD
 }
 
-export function CalendarGrid({ year, month, expenses, allExpenses, specialDates, onDateClick, onWeekBudgetClick }: CalendarGridProps) {
+export function CalendarGrid({ year, month, expenses, allExpenses, specialDates, memoDates, onDateClick, onWeekBudgetClick }: CalendarGridProps) {
   const days = getMonthDays(year, month);
   const today = new Date();
 
@@ -111,6 +112,7 @@ export function CalendarGrid({ year, month, expenses, allExpenses, specialDates,
             month={month}
             dailyTotals={dailyTotals}
             specialDates={specialDates}
+            memoDates={memoDates}
             onDateClick={onDateClick}
             onWeekBudgetClick={onWeekBudgetClick}
           />
@@ -131,6 +133,7 @@ interface WeekSectionProps {
   month: number;
   dailyTotals: Map<string, number>;
   specialDates: Set<string>;
+  memoDates: Set<string>;
   onDateClick: (dateString: string) => void;
   onWeekBudgetClick: (weekStart: string) => void;
 }
@@ -145,6 +148,7 @@ function WeekSection({
   month,
   dailyTotals,
   specialDates,
+  memoDates,
   onDateClick,
   onWeekBudgetClick,
 }: WeekSectionProps) {
@@ -177,6 +181,7 @@ function WeekSection({
               isToday={isToday}
               otherMonth={otherMonth}
               hasSpecial={specialDates.has(dateStr)}
+              hasMemo={memoDates.has(dateStr)}
               onClick={() => onDateClick(dateStr)}
             />
           );

@@ -1,5 +1,6 @@
 import Dexie, { type Table } from 'dexie';
 import type {
+  DayMemo,
   Expense,
   FixedCostAmountChange,
   FixedCostItem,
@@ -15,6 +16,7 @@ export class SeihinDB extends Dexie {
   fixedCostItems!: Table<FixedCostItem, string>;
   fixedCostAmountChanges!: Table<FixedCostAmountChange, string>;
   monthBudgets!: Table<MonthBudget, string>;
+  dayMemos!: Table<DayMemo, string>;
 
   constructor() {
     super('seihin');
@@ -154,6 +156,18 @@ export class SeihinDB extends Dexie {
       fixedCostAmountChanges:
         'id, itemId, effectiveYearMonth, updatedAt, [itemId+effectiveYearMonth]',
       monthBudgets: 'yearMonth',
+    });
+
+    // v11: 日別メモテーブル追加（1日1件の自由記入メモ）
+    this.version(11).stores({
+      expenses: 'id, date, category, createdAt, updatedAt',
+      metadata: 'key',
+      weekBudgets: 'weekStart',
+      fixedCostItems: 'id, order, startYearMonth, endYearMonth, updatedAt',
+      fixedCostAmountChanges:
+        'id, itemId, effectiveYearMonth, updatedAt, [itemId+effectiveYearMonth]',
+      monthBudgets: 'yearMonth',
+      dayMemos: 'date, updatedAt',
     });
   }
 }

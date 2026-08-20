@@ -12,6 +12,7 @@ import { MonthBudgetDialog } from './MonthBudgetDialog';
 import { MonthBudgetPanel } from './MonthBudgetPanel';
 import { useExpensesByDateRange } from '../../hooks/useExpenses';
 import { useMonthBudget } from '../../hooks/useMonthBudget';
+import { useDayMemosByDateRange } from '../../hooks/useDayMemo';
 import { useMonthlyFixedCosts } from '../../hooks/useFixedCosts';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { getMonthDays, toDateString } from '../../utils/date';
@@ -48,6 +49,10 @@ export function CalendarView() {
   const specialDates = new Set(
     allExpenses.filter(e => e.isSpecial).map(e => e.date),
   );
+
+  // メモがある日付（カレンダーにマークを表示する）
+  const dayMemos = useDayMemosByDateRange(calendarStart, calendarEnd);
+  const memoDates = new Set(dayMemos.map(m => m.date));
 
   // 月合計・カテゴリ集計は当月分のみ
   const monthStartStr = `${year}-${String(month + 1).padStart(2, '0')}-01`;
@@ -204,6 +209,7 @@ export function CalendarView() {
           expenses={filteredExpenses}
           allExpenses={allExpenses}
           specialDates={specialDates}
+          memoDates={memoDates}
           onDateClick={(dateStr) => setSelectedDate(dateStr)}
           onWeekBudgetClick={(weekStart) => setSelectedWeekStart(weekStart)}
         />

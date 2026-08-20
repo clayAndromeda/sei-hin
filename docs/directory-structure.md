@@ -5,7 +5,7 @@ src/
 ├── types/        # 型定義
 ├── constants/    # 定数（カテゴリなど）
 ├── services/     # DB、Dropbox、同期、暗号化
-├── hooks/        # カスタムHooks（支出CRUD、同期、週予算）
+├── hooks/        # カスタムHooks（支出CRUD、同期、週予算、日別メモ）
 ├── utils/        # ユーティリティ（日付、金額フォーマット、グラフ変換）
 ├── components/   # UIコンポーネント
 │   ├── Calendar/       # カレンダー画面
