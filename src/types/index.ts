@@ -20,6 +20,15 @@ export interface DayMemo {
   deleted?: boolean; // 削除フラグ（同期用）
 }
 
+// 1日ごとの「使う予定の金額」（事前入力。自由に使えるお金の見通し用）
+export interface DayPlan {
+  date: string; // "YYYY-MM-DD" 形式（1日1件。主キー）
+  amount: number; // 使う予定の金額（円、整数）
+  memo: string; // 予定の内容（任意、空文字可。例: "飲み会"）
+  updatedAt: string; // ISO 8601 datetime（同期マージ用）
+  deleted?: boolean; // 削除フラグ（同期用）
+}
+
 // デフォルト週予算の同期用データ
 export interface DefaultWeekBudgetSync {
   budget: number;
@@ -34,7 +43,7 @@ export interface DefaultMonthBudgetSync {
 
 // Dropboxに保存するデータ全体
 export interface SeihinData {
-  version: 1 | 2 | 3 | 4 | 5 | 6 | 7;
+  version: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
   updatedAt: string; // ISO 8601 datetime
   expenses: Expense[];
   weekBudgets?: WeekBudget[]; // v3で追加（後方互換のためoptional）
@@ -44,6 +53,7 @@ export interface SeihinData {
   defaultMonthBudget?: DefaultMonthBudgetSync; // v5で追加（後方互換のためoptional）
   monthBudgets?: MonthBudget[]; // v6で追加（後方互換のためoptional）
   dayMemos?: DayMemo[]; // v7で追加（後方互換のためoptional）
+  dayPlans?: DayPlan[]; // v8で追加（後方互換のためoptional）
 }
 
 // メタデータ（IndexedDB用）

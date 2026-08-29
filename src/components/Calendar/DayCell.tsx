@@ -6,6 +6,7 @@ import { isFutureDate } from '../../utils/date';
 interface DayCellProps {
   date: Date;
   amount: number;
+  plannedAmount?: number; // その日に使う予定の金額（0なら予定なし）
   isToday: boolean;
   otherMonth?: boolean; // 表示中の月以外の日付
   hasSpecial?: boolean; // 特別な支出がある日（除外モードでも表示する）
@@ -16,6 +17,7 @@ interface DayCellProps {
 export function DayCell({
   date,
   amount,
+  plannedAmount = 0,
   isToday,
   otherMonth = false,
   hasSpecial = false,
@@ -23,6 +25,8 @@ export function DayCell({
   onClick,
 }: DayCellProps) {
   const future = isFutureDate(date);
+  // 予定は「これから使う分」なので、今日以降の日にだけ表示する
+  const showPlan = plannedAmount > 0 && (future || isToday);
 
   return (
     <ButtonBase
@@ -93,6 +97,19 @@ export function DayCell({
           }}
         >
           {formatCurrency(amount)}
+        </Typography>
+      )}
+      {showPlan && (
+        <Typography
+          variant="caption"
+          aria-label="使う予定"
+          sx={{
+            fontSize: { xs: '0.55rem', sm: '0.6rem', md: '0.65rem' },
+            lineHeight: 1.2,
+            color: isToday ? 'inherit' : 'info.main',
+          }}
+        >
+          予{formatCurrency(plannedAmount)}
         </Typography>
       )}
     </ButtonBase>

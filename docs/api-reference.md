@@ -16,6 +16,13 @@
 - `setDayMemo(dateString, text)`: メモを保存（空文字なら論理削除。内容が同じなら書き込まない）
 - `deleteDayMemo(dateString)`: メモを論理削除
 
+## hooks/useDayPlan.ts
+
+- `useDayPlan(dateString)`: 特定日の使う予定をリアクティブ取得（未設定・削除済みはnull）
+- `useDayPlansByDateRange(start, end)`: 範囲指定で予定一覧を取得（削除済み・0円は除外）
+- `setDayPlan(dateString, amount, memo)`: 予定を保存（0円以下なら論理削除。内容が同じなら書き込まない）
+- `deleteDayPlan(dateString)`: 予定を論理削除
+
 ## hooks/useSync.ts
 
 - `triggerSync()`: 手動同期実行
@@ -58,13 +65,15 @@
 ## utils/budget.ts
 
 - `calcMonthBudgetStatus(input)`: 月予算の消化状況を計算（残額・消化率・超過判定・月末ペース予測・1日あたり使える金額）
+- `sumUpcomingPlans(input)`: 指定範囲の「使う予定」のうち今日以降の未消化分を合計（今日の分は実績を差し引く）
 
 ## services/sync.ts
 
-- `performSync()`: 同期実行（expenses + weekBudgets + monthBudgets + defaultWeekBudget + defaultMonthBudget + 固定費 + dayMemos、排他制御あり）
+- `performSync()`: 同期実行（expenses + weekBudgets + monthBudgets + defaultWeekBudget + defaultMonthBudget + 固定費 + dayMemos + dayPlans、排他制御あり）
 - `mergeExpenses(local, remote)`: expensesマージロジック（ID基準、updatedAt比較）
 - `mergeWeekBudgets(local, remote)`: weekBudgetsマージロジック（weekStart基準、updatedAt比較）
 - `mergeMonthBudgets(local, remote)`: monthBudgetsマージロジック（yearMonth基準、updatedAt比較）
 - `mergeDefaultWeekBudget(local, remote)`: defaultWeekBudgetマージ（updatedAt比較）
 - `mergeDefaultMonthBudget(local, remote)`: defaultMonthBudgetマージ（updatedAt比較）
 - `mergeDayMemos(local, remote)`: dayMemosマージロジック（date基準、updatedAt比較）
+- `mergeDayPlans(local, remote)`: dayPlansマージロジック（date基準、updatedAt比較）

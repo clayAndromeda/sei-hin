@@ -13,12 +13,14 @@ import { MonthBudgetPanel } from './MonthBudgetPanel';
 import { useExpensesByDateRange } from '../../hooks/useExpenses';
 import { useMonthBudget } from '../../hooks/useMonthBudget';
 import { useDayMemosByDateRange } from '../../hooks/useDayMemo';
+import { useDayPlansByDateRange } from '../../hooks/useDayPlan';
 import { useMonthlyFixedCosts } from '../../hooks/useFixedCosts';
 import { usePersistedState } from '../../hooks/usePersistedState';
 import { getMonthDays, toDateString } from '../../utils/date';
 import { formatYearMonth } from '../../utils/fixedCost';
 import { formatCurrency } from '../../utils/format';
 import { aggregateByCategory } from '../../utils/chart';
+import { sumUpcomingPlans } from '../../utils/budget';
 import { CategoryDonutChart } from '../Summary/CategoryDonutChart';
 
 export function CalendarView() {
@@ -54,6 +56,9 @@ export function CalendarView() {
   const dayMemos = useDayMemosByDateRange(calendarStart, calendarEnd);
   const memoDates = new Set(dayMemos.map(m => m.date));
 
+  // 各日に使う予定（カレンダー表示範囲分。週・月の「自由に使えるお金」の計算にも使う）
+  const dayPlans = useDayPlansByDateRange(calendarStart, calendarEnd);
+
   // 月合計・カテゴリ集計は当月分のみ
   const monthStartStr = `${year}-${String(month + 1).padStart(2, '0')}-01`;
   const monthEndStr = `${year}-${String(month + 1).padStart(2, '0')}-31`;
@@ -76,6 +81,19 @@ export function CalendarView() {
   const monthTotalForBudget = allExpenses
     .filter(e => e.date >= monthStartStr && e.date <= monthEndStr)
     .reduce((sum, e) => sum + e.amount, 0);
+
+  // 当月にこれから使う予定の合計（今日の分は既に使った額を差し引く）
+  const spentByDate = new Map<string, number>();
+  for (const expense of allExpenses) {
+    spentByDate.set(expense.date, (spentByDate.get(expense.date) ?? 0) + expense.amount);
+  }
+  const monthPlannedRemaining = sumUpcomingPlans({
+    plans: dayPlans,
+    spentByDate,
+    todayString: toDateString(today),
+    startDate: monthStartStr,
+    endDate: monthEndStr,
+  });
 
   const goToPrevMonth = () => {
     if (month === 0) {
@@ -197,6 +215,7 @@ export function CalendarView() {
               daysElapsed={daysForAverage}
               daysInMonth={lastDayOfMonth}
               isCurrentMonth={isCurrentMonth}
+              plannedRemaining={monthPlannedRemaining}
               onEditBudget={() => setMonthBudgetDialogOpen(true)}
             />
           </Box>
@@ -210,6 +229,7 @@ export function CalendarView() {
           allExpenses={allExpenses}
           specialDates={specialDates}
           memoDates={memoDates}
+          dayPlans={dayPlans}
           onDateClick={(dateStr) => setSelectedDate(dateStr)}
           onWeekBudgetClick={(weekStart) => setSelectedWeekStart(weekStart)}
         />
@@ -234,6 +254,7 @@ export function CalendarView() {
                 daysElapsed={daysForAverage}
                 daysInMonth={lastDayOfMonth}
                 isCurrentMonth={isCurrentMonth}
+                plannedRemaining={monthPlannedRemaining}
                 onEditBudget={() => setMonthBudgetDialogOpen(true)}
               />
               <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>

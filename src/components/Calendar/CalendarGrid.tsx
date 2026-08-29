@@ -3,7 +3,8 @@ import { DayCell } from './DayCell';
 import { WeekSummaryRow } from './WeekSummaryRow';
 import { getMonthDays, isSameDay, WEEKDAY_LABELS, toDateString, getWeekStartString, isInMonth } from '../../utils/date';
 import { useWeekBudget } from '../../hooks/useWeekBudget';
-import type { Expense } from '../../types';
+import { sumUpcomingPlans } from '../../utils/budget';
+import type { DayPlan, Expense } from '../../types';
 
 interface CalendarGridProps {
   year: number;
@@ -12,6 +13,7 @@ interface CalendarGridProps {
   allExpenses: Expense[]; // フィルタ前の全支出（特別な支出込みの予算超過判定用）
   specialDates: Set<string>; // 特別な支出がある日付（除外モードでもマーカー表示するためフィルタ前の全支出から算出）
   memoDates: Set<string>; // その日のメモがある日付（マーカー表示用）
+  dayPlans: DayPlan[]; // 各日に使う予定（カレンダー表示範囲分）
   onDateClick: (dateString: string) => void;
   onWeekBudgetClick: (weekStart: string) => void; // 週予算設定ボタンクリック時
 }
@@ -22,7 +24,7 @@ interface WeekData {
   weekStart: string; // 週開始日（月曜）のYYYY-MM-DD
 }
 
-export function CalendarGrid({ year, month, expenses, allExpenses, specialDates, memoDates, onDateClick, onWeekBudgetClick }: CalendarGridProps) {
+export function CalendarGrid({ year, month, expenses, allExpenses, specialDates, memoDates, dayPlans, onDateClick, onWeekBudgetClick }: CalendarGridProps) {
   const days = getMonthDays(year, month);
   const today = new Date();
 
@@ -47,6 +49,12 @@ export function CalendarGrid({ year, month, expenses, allExpenses, specialDates,
         (dailyTotalsWithoutSpecial.get(expense.date) ?? 0) + expense.amount,
       );
     }
+  }
+
+  // 日付ごとの予定金額
+  const plannedAmounts = new Map<string, number>();
+  for (const plan of dayPlans) {
+    plannedAmounts.set(plan.date, plan.amount);
   }
 
   // 42マスを7日ずつ6週に分割
@@ -111,6 +119,8 @@ export function CalendarGrid({ year, month, expenses, allExpenses, specialDates,
             year={year}
             month={month}
             dailyTotals={dailyTotals}
+            dailyTotalsWithSpecial={dailyTotalsWithSpecial}
+            plannedAmounts={plannedAmounts}
             specialDates={specialDates}
             memoDates={memoDates}
             onDateClick={onDateClick}
@@ -132,6 +142,8 @@ interface WeekSectionProps {
   year: number;
   month: number;
   dailyTotals: Map<string, number>;
+  dailyTotalsWithSpecial: Map<string, number>; // 予定の消化判定に使う実績（フィルタと独立）
+  plannedAmounts: Map<string, number>; // 日別の使う予定金額
   specialDates: Set<string>;
   memoDates: Set<string>;
   onDateClick: (dateString: string) => void;
@@ -147,6 +159,8 @@ function WeekSection({
   year,
   month,
   dailyTotals,
+  dailyTotalsWithSpecial,
+  plannedAmounts,
   specialDates,
   memoDates,
   onDateClick,
@@ -156,6 +170,15 @@ function WeekSection({
   const todayStr = toDateString(today);
   const todaySpent = dailyTotals.get(todayStr) ?? 0;
   const isCurrentWeek = getWeekStartString(today) === week.weekStart;
+
+  // この週にこれから使う予定の合計（今日の分は使った額を差し引く）
+  const weekPlanned = sumUpcomingPlans({
+    plans: Array.from(plannedAmounts, ([date, amount]) => ({ date, amount })),
+    spentByDate: dailyTotalsWithSpecial,
+    todayString: todayStr,
+    startDate: week.weekStart,
+    endDate: toDateString(week.days[6]),
+  });
 
   return (
     <Box sx={{ mb: { xs: 1, sm: 1.5 } }}>
@@ -182,6 +205,7 @@ function WeekSection({
               otherMonth={otherMonth}
               hasSpecial={specialDates.has(dateStr)}
               hasMemo={memoDates.has(dateStr)}
+              plannedAmount={plannedAmounts.get(dateStr) ?? 0}
               onClick={() => onDateClick(dateStr)}
             />
           );
@@ -195,6 +219,7 @@ function WeekSection({
           weekTotalWithSpecial={weekTotalWithSpecial}
           weekTotalWithoutSpecial={weekTotalWithoutSpecial}
           weekBudget={weekBudget}
+          weekPlanned={weekPlanned}
           todaySpent={todaySpent}
           isCurrentWeek={isCurrentWeek}
           onBudgetClick={() => onWeekBudgetClick(week.weekStart)}

@@ -9,6 +9,7 @@ interface WeekSummaryRowProps {
   weekTotalWithSpecial: number; // 特別な支出を含む週合計（予算超過判定用）
   weekTotalWithoutSpecial: number; // 特別な支出を除いた週合計（予算超過判定用）
   weekBudget: number | null; // 週予算（null = 未設定）
+  weekPlanned: number; // この週にこれから使う予定の合計（今日以降の未消化分）
   todaySpent: number; // 今日の支出合計
   isCurrentWeek: boolean; // 今週かどうか
   onBudgetClick: () => void; // 予算設定ボタンクリック時のハンドラー
@@ -20,6 +21,7 @@ export function WeekSummaryRow({
   weekTotalWithSpecial,
   weekTotalWithoutSpecial,
   weekBudget,
+  weekPlanned,
   todaySpent,
   isCurrentWeek,
   onBudgetClick,
@@ -34,6 +36,10 @@ export function WeekSummaryRow({
   let todayRemainingText = '';
   let todayRemainingColor = 'success.main';
   const remainingDays = getRemainingDaysInWeek(weekStart);
+
+  // 予定を差し引いた「自由に使えるお金」
+  let freeText = '';
+  let freeColor = 'success.main';
 
   if (weekBudget !== null) {
     const remaining = weekBudget - weekTotal;
@@ -53,6 +59,15 @@ export function WeekSummaryRow({
       backgroundColor = 'warning.light'; // 特別な支出による超過はオレンジ背景
     } else if (remaining >= 0) {
       budgetText = ` | 予算まであと${formatCurrency(remaining)}`;
+    }
+
+    // 予定を入れている週は、予定を除いて自由に使える額を出す
+    if (weekPlanned > 0) {
+      const free = remaining - weekPlanned;
+      freeText = `予定 ${formatCurrency(weekPlanned)} を除くと: ${formatCurrency(free)}`;
+      if (free < 0) {
+        freeColor = 'error.main';
+      }
     }
 
     // 表示中の合計が予算内なら1日あたりの目安を表示（オレンジ表示時も計画は立てられる）
@@ -111,6 +126,19 @@ export function WeekSummaryRow({
           }}
         >
           {dailyBudgetText}
+        </Typography>
+      )}
+      {freeText && (
+        <Typography
+          variant="body2"
+          sx={{
+            fontWeight: 'bold',
+            color: freeColor,
+            fontSize: { xs: '0.8rem', sm: '0.85rem', md: '0.9rem' },
+            mt: 0.25,
+          }}
+        >
+          {freeText}
         </Typography>
       )}
       {todayRemainingText && (

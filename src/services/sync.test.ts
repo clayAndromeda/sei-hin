@@ -8,9 +8,11 @@ import {
   mergeFixedCostItems,
   mergeFixedCostAmountChanges,
   mergeDayMemos,
+  mergeDayPlans,
 } from './sync';
 import type {
   DayMemo,
+  DayPlan,
   Expense,
   WeekBudget,
   MonthBudget,
@@ -656,6 +658,49 @@ describe('mergeDayMemos', () => {
     ];
     const result = mergeDayMemos(local, remote);
     expect(result).toHaveLength(1);
+    expect(result[0].deleted).toBe(true);
+  });
+});
+
+describe('mergeDayPlans', () => {
+  function createDayPlan(overrides: Partial<DayPlan> = {}): DayPlan {
+    return {
+      date: '2026-02-14',
+      amount: 3000,
+      memo: '飲み会',
+      updatedAt: '2026-02-14T00:00:00Z',
+      ...overrides,
+    };
+  }
+
+  it('日付が異なる予定は両方残る', () => {
+    const local = [createDayPlan({ date: '2026-02-14' })];
+    const remote = [createDayPlan({ date: '2026-02-15' })];
+    const result = mergeDayPlans(local, remote);
+    expect(result).toHaveLength(2);
+  });
+
+  it('同じ日付ならupdatedAtが新しい方を採用する', () => {
+    const local = [createDayPlan({ amount: 3000, updatedAt: '2026-02-14T00:00:00Z' })];
+    const remote = [createDayPlan({ amount: 5000, updatedAt: '2026-02-15T00:00:00Z' })];
+    const result = mergeDayPlans(local, remote);
+    expect(result).toHaveLength(1);
+    expect(result[0].amount).toBe(5000);
+  });
+
+  it('リモートが古い場合はローカルを維持する', () => {
+    const local = [createDayPlan({ amount: 3000, updatedAt: '2026-02-16T00:00:00Z' })];
+    const remote = [createDayPlan({ amount: 5000, updatedAt: '2026-02-15T00:00:00Z' })];
+    const result = mergeDayPlans(local, remote);
+    expect(result[0].amount).toBe(3000);
+  });
+
+  it('削除フラグ付きの予定も新しければ採用される', () => {
+    const local = [createDayPlan({ updatedAt: '2026-02-14T00:00:00Z' })];
+    const remote = [
+      createDayPlan({ amount: 0, deleted: true, updatedAt: '2026-02-15T00:00:00Z' }),
+    ];
+    const result = mergeDayPlans(local, remote);
     expect(result[0].deleted).toBe(true);
   });
 });

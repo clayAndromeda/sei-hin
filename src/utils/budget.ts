@@ -70,3 +70,33 @@ export function calcMonthBudgetStatus(
     remainingDays,
   };
 }
+
+// 「使う予定」の集計（純粋関数）
+export interface UpcomingPlansInput {
+  plans: { date: string; amount: number }[]; // 期間外の予定が混ざっていてもよい
+  spentByDate: Map<string, number>; // 日別の実績合計（"YYYY-MM-DD" → 円）
+  todayString: string; // 今日の日付（"YYYY-MM-DD"）
+  startDate: string; // 集計範囲の開始日（含む、"YYYY-MM-DD"）
+  endDate: string; // 集計範囲の終了日（含む、"YYYY-MM-DD"）
+}
+
+// 指定範囲のうち今日以降の「使う予定」で、まだ使っていない分を合計する。
+// 今日の分は既に使った額を差し引く（予定以上に使っていれば0）。
+// 過去の日の予定は実績に置き換わっているため無視する。
+export function sumUpcomingPlans(input: UpcomingPlansInput): number {
+  const { plans, spentByDate, todayString, startDate, endDate } = input;
+
+  let total = 0;
+  for (const plan of plans) {
+    if (plan.date < startDate || plan.date > endDate) continue;
+    if (plan.date < todayString) continue;
+
+    if (plan.date === todayString) {
+      const spent = spentByDate.get(plan.date) ?? 0;
+      total += Math.max(plan.amount - spent, 0);
+    } else {
+      total += plan.amount;
+    }
+  }
+  return total;
+}

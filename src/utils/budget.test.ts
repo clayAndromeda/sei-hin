@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { calcMonthBudgetStatus } from './budget';
+import { calcMonthBudgetStatus, sumUpcomingPlans } from './budget';
 
 describe('calcMonthBudgetStatus', () => {
   it('予算内の場合、残額と消化率を正しく計算する', () => {
@@ -139,5 +139,69 @@ describe('calcMonthBudgetStatus', () => {
     });
     expect(status.progress).toBe(0);
     expect(status.isOver).toBe(false);
+  });
+});
+
+describe('sumUpcomingPlans', () => {
+  const plans = [
+    { date: '2026-02-10', amount: 3000 }, // 過去
+    { date: '2026-02-14', amount: 5000 }, // 今日
+    { date: '2026-02-20', amount: 8000 }, // 未来
+    { date: '2026-03-01', amount: 9000 }, // 範囲外
+  ];
+
+  it('過去の予定は実績に置き換わっているため合計しない', () => {
+    const total = sumUpcomingPlans({
+      plans,
+      spentByDate: new Map(),
+      todayString: '2026-02-14',
+      startDate: '2026-02-01',
+      endDate: '2026-02-28',
+    });
+    expect(total).toBe(13000); // 今日5000 + 未来8000
+  });
+
+  it('今日の予定は既に使った額を差し引く', () => {
+    const total = sumUpcomingPlans({
+      plans,
+      spentByDate: new Map([['2026-02-14', 2000]]),
+      todayString: '2026-02-14',
+      startDate: '2026-02-01',
+      endDate: '2026-02-28',
+    });
+    expect(total).toBe(11000); // 今日(5000-2000) + 未来8000
+  });
+
+  it('今日の予定を超えて使っていても負にはならない', () => {
+    const total = sumUpcomingPlans({
+      plans,
+      spentByDate: new Map([['2026-02-14', 9000]]),
+      todayString: '2026-02-14',
+      startDate: '2026-02-01',
+      endDate: '2026-02-28',
+    });
+    expect(total).toBe(8000); // 今日は0扱い + 未来8000
+  });
+
+  it('範囲外の予定は合計しない', () => {
+    const total = sumUpcomingPlans({
+      plans,
+      spentByDate: new Map(),
+      todayString: '2026-02-14',
+      startDate: '2026-02-16',
+      endDate: '2026-02-22',
+    });
+    expect(total).toBe(8000);
+  });
+
+  it('未来の日の実績は差し引かない（予定はそのまま残る）', () => {
+    const total = sumUpcomingPlans({
+      plans,
+      spentByDate: new Map([['2026-02-20', 1000]]),
+      todayString: '2026-02-14',
+      startDate: '2026-02-01',
+      endDate: '2026-02-28',
+    });
+    expect(total).toBe(13000);
   });
 });

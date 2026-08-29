@@ -18,6 +18,7 @@ interface MonthBudgetPanelProps {
   daysElapsed: number; // 経過日数
   daysInMonth: number; // 月の日数
   isCurrentMonth: boolean; // 表示中の月が今月かどうか
+  plannedRemaining?: number; // 今日以降に使う予定の合計（未消化分）
   onEditBudget: () => void; // 予算編集ボタンクリック時
 }
 
@@ -31,6 +32,7 @@ export function MonthBudgetPanel({
   daysElapsed,
   daysInMonth,
   isCurrentMonth,
+  plannedRemaining = 0,
   onEditBudget,
 }: MonthBudgetPanelProps) {
   const totalSpent = variableSpent + fixedCostTotal;
@@ -138,6 +140,20 @@ export function MonthBudgetPanel({
       <Typography variant="caption" color="text.secondary">
         {breakdownText}
       </Typography>
+
+      {/* 予定を差し引いた自由に使えるお金（予定が入っている月のみ） */}
+      {plannedRemaining > 0 && (
+        <Typography
+          variant="body2"
+          sx={{
+            fontWeight: 'bold',
+            color: status.remaining - plannedRemaining < 0 ? 'error.main' : 'success.main',
+          }}
+        >
+          予定 {formatCurrency(plannedRemaining)} を除くと:{' '}
+          {formatCurrency(status.remaining - plannedRemaining)}
+        </Typography>
+      )}
 
       {/* 消化状況バー（超えそうなペースなら警告色、超過なら赤） */}
       <LinearProgress

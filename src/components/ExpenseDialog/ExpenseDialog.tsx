@@ -36,6 +36,7 @@ import { CATEGORIES, DEFAULT_CATEGORY } from '../../constants/categories';
 import { FOOD_SUBCATEGORIES } from '../../constants/foodSubcategories';
 import { useMemoSuggestions } from '../../hooks/useMemoSuggestions';
 import { useDayMemo, setDayMemo } from '../../hooks/useDayMemo';
+import { useDayPlan, setDayPlan } from '../../hooks/useDayPlan';
 import { useDialogHistory } from '../../hooks/useDialogHistory';
 import { addDaysToDateString, WEEKDAY_LABELS } from '../../utils/date';
 import type { Expense } from '../../types';
@@ -75,6 +76,23 @@ export function ExpenseDialog({
   const editingMemoDateRef = useRef<string | null>(null);
   const dayMemoTextRef = useRef('');
 
+  // その日に使う予定の金額（事前入力。自由に使えるお金の見通しに使う）
+  const savedDayPlan = useDayPlan(date);
+  // 未保存の予定入力（nullなら保存待ちの入力はない）
+  const pendingPlanRef = useRef<{ date: string; amount: string; memo: string } | null>(null);
+  const planAmountInputRef = useRef<HTMLInputElement>(null);
+  const planMemoInputRef = useRef<HTMLInputElement>(null);
+
+  // 予定は金額と内容の2項目で1レコードなので、どちらかを編集したら両方の
+  // 入力値をまとめて控えておく（片方だけ保存して他方を消してしまわないため）
+  const capturePlanInput = () => {
+    pendingPlanRef.current = {
+      date,
+      amount: planAmountInputRef.current?.value ?? '',
+      memo: planMemoInputRef.current?.value ?? '',
+    };
+  };
+
   // 未保存のメモを保存する（フォーカスが外れたとき・日移動・ダイアログを閉じるとき）
   const flushDayMemo = useCallback(() => {
     const targetDate = editingMemoDateRef.current;
@@ -83,11 +101,26 @@ export function ExpenseDialog({
     void setDayMemo(targetDate, dayMemoTextRef.current);
   }, []);
 
-  // 閉じる前に未保存のメモを保存する
-  const handleClose = useCallback(() => {
+  // 未保存の予定を保存する（メモと同じタイミング）
+  const flushDayPlan = useCallback(() => {
+    const pending = pendingPlanRef.current;
+    if (pending === null) return;
+    pendingPlanRef.current = null;
+    const parsed = parseInt(pending.amount, 10);
+    void setDayPlan(pending.date, isNaN(parsed) ? 0 : parsed, pending.memo);
+  }, []);
+
+  // 未保存の入力（メモ・予定）をまとめて保存する
+  const flushDayInputs = useCallback(() => {
     flushDayMemo();
+    flushDayPlan();
+  }, [flushDayMemo, flushDayPlan]);
+
+  // 閉じる前に未保存の入力を保存する
+  const handleClose = useCallback(() => {
+    flushDayInputs();
     onClose();
-  }, [flushDayMemo, onClose]);
+  }, [flushDayInputs, onClose]);
 
   // ブラウザの「戻る」でもダイアログを閉じられるようにする
   useDialogHistory(open, handleClose);
@@ -105,10 +138,10 @@ export function ExpenseDialog({
       setSubcategory('');
       setIsSpecial(false);
       setEditingId(null);
-      // 閉じ方によらず未保存のメモを取りこぼさない（保存済みなら何もしない）
-      flushDayMemo();
+      // 閉じ方によらず未保存の入力を取りこぼさない（保存済みなら何もしない）
+      flushDayInputs();
     }
-  }, [open, flushDayMemo]);
+  }, [open, flushDayInputs]);
 
   // ダイアログを開いたときに編集対象が指定されていればプリセット
   useEffect(() => {
@@ -185,7 +218,7 @@ export function ExpenseDialog({
 
   // 前日/翌日へ移動。別の日の記録を編集中のままにしないよう、フォームをリセットする
   const handleNavigateDate = (days: number) => {
-    flushDayMemo();
+    flushDayInputs();
     handleCancel();
     onNavigateDate?.(addDaysToDateString(date, days));
   };
@@ -393,6 +426,38 @@ export function ExpenseDialog({
             </Typography>
           </>
         )}
+
+        {/* この日に使う予定（事前入力。週・月の「自由に使えるお金」から差し引かれる） */}
+        <Divider sx={{ mt: 2 }}>
+          <Typography variant="caption">この日の使う予定</Typography>
+        </Divider>
+        <Box sx={{ display: 'flex', gap: 1, mt: 1, mb: 1 }}>
+          <TextField
+            // メモ欄と同様に非制御。日付の切り替えや同期でDBの値が変わったときは
+            // keyの変化で入力欄を作り直して反映する
+            key={`plan-amount:${date}:${savedDayPlan?.amount ?? ''}`}
+            label="予定金額"
+            type="number"
+            defaultValue={savedDayPlan ? String(savedDayPlan.amount) : ''}
+            onChange={capturePlanInput}
+            onBlur={flushDayPlan}
+            inputRef={planAmountInputRef}
+            slotProps={{ htmlInput: { inputMode: 'numeric', min: 0 } }}
+            size="small"
+            sx={{ flex: 1 }}
+          />
+          <TextField
+            key={`plan-memo:${date}:${savedDayPlan?.memo ?? ''}`}
+            label="予定の内容"
+            defaultValue={savedDayPlan?.memo ?? ''}
+            onChange={capturePlanInput}
+            onBlur={flushDayPlan}
+            inputRef={planMemoInputRef}
+            placeholder="飲み会 など"
+            size="small"
+            sx={{ flex: 2 }}
+          />
+        </Box>
 
         {/* その日のメモ（自由入力。入力があるとカレンダーにマークが付く） */}
         <Divider sx={{ mt: 2 }}>
