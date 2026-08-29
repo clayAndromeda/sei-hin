@@ -15,6 +15,7 @@ import { useMonthBudget } from '../../hooks/useMonthBudget';
 import { useDayMemosByDateRange } from '../../hooks/useDayMemo';
 import { useMonthlyFixedCosts } from '../../hooks/useFixedCosts';
 import { usePersistedState } from '../../hooks/usePersistedState';
+import { useViewedMonth } from '../../contexts/viewedMonth';
 import { getMonthDays, toDateString } from '../../utils/date';
 import { formatYearMonth } from '../../utils/fixedCost';
 import { formatCurrency } from '../../utils/format';
@@ -23,8 +24,9 @@ import { CategoryDonutChart } from '../Summary/CategoryDonutChart';
 
 export function CalendarView() {
   const today = new Date();
-  const [year, setYear] = useState(today.getFullYear());
-  const [month, setMonth] = useState(today.getMonth());
+  // 表示中の年月はサマリー（月次）と共有する（タブを切り替えても月が維持される）
+  const { year, month, goToPrevMonth, goToNextMonth, goToCurrentMonth, isCurrentMonth } =
+    useViewedMonth();
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedWeekStart, setSelectedWeekStart] = useState<string | null>(null);
   const [monthBudgetDialogOpen, setMonthBudgetDialogOpen] = useState(false);
@@ -65,7 +67,6 @@ export function CalendarView() {
 
   // 月の平均計算
   const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
-  const isCurrentMonth = year === today.getFullYear() && month === today.getMonth();
   const daysForAverage = isCurrentMonth ? today.getDate() : lastDayOfMonth;
   const dailyAverage = daysForAverage > 0 ? Math.floor(monthTotal / daysForAverage) : 0;
 
@@ -76,30 +77,6 @@ export function CalendarView() {
   const monthTotalForBudget = allExpenses
     .filter(e => e.date >= monthStartStr && e.date <= monthEndStr)
     .reduce((sum, e) => sum + e.amount, 0);
-
-  const goToPrevMonth = () => {
-    if (month === 0) {
-      setYear(year - 1);
-      setMonth(11);
-    } else {
-      setMonth(month - 1);
-    }
-  };
-
-  const goToNextMonth = () => {
-    if (month === 11) {
-      setYear(year + 1);
-      setMonth(0);
-    } else {
-      setMonth(month + 1);
-    }
-  };
-
-  const goToToday = () => {
-    const today = new Date();
-    setYear(today.getFullYear());
-    setMonth(today.getMonth());
-  };
 
   return (
     <Box
@@ -143,7 +120,7 @@ export function CalendarView() {
               <ChevronRightIcon />
             </IconButton>
             <Tooltip title="今日にジャンプ">
-              <IconButton onClick={goToToday} size="small" color="primary">
+              <IconButton onClick={goToCurrentMonth} size="small" color="primary">
                 <MyLocationIcon fontSize="small" />
               </IconButton>
             </Tooltip>

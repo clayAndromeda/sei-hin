@@ -6,6 +6,7 @@ import {
   getMonthDays,
   isInMonth,
   getWeekRange,
+  shiftMonth,
   getWeekStartString,
   isSameDay,
   isFutureDate,
@@ -284,5 +285,25 @@ describe('getRemainingDaysInWeek', () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(2026, 1, 14));
     expect(getRemainingDaysInWeek('2026-02-09')).toBe(2);
+  });
+});
+
+describe('shiftMonth', () => {
+  it('翌月・前月に移動する', () => {
+    expect(shiftMonth(2026, 1, 1)).toEqual({ year: 2026, month: 2 });
+    expect(shiftMonth(2026, 1, -1)).toEqual({ year: 2026, month: 0 });
+  });
+
+  it('12月から翌月に進むと翌年1月になる', () => {
+    expect(shiftMonth(2026, 11, 1)).toEqual({ year: 2027, month: 0 });
+  });
+
+  it('1月から前月に戻ると前年12月になる', () => {
+    expect(shiftMonth(2026, 0, -1)).toEqual({ year: 2025, month: 11 });
+  });
+
+  it('複数ヶ月まとめて移動できる', () => {
+    expect(shiftMonth(2026, 2, -5)).toEqual({ year: 2025, month: 9 });
+    expect(shiftMonth(2026, 10, 14)).toEqual({ year: 2028, month: 0 });
   });
 });

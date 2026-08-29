@@ -108,3 +108,13 @@ export function getRemainingDaysInWeek(weekStart: string): number {
   // 今日から日曜日までの日数（今日を含む）
   return Math.floor((end.getTime() - today.getTime()) / 86400000) + 1;
 }
+
+// 年月（month は 0-indexed）を delta ヶ月ずらした年月を返す（負数で過去方向）
+export function shiftMonth(
+  year: number,
+  month: number,
+  delta: number,
+): { year: number; month: number } {
+  const total = year * 12 + month + delta;
+  return { year: Math.floor(total / 12), month: ((total % 12) + 12) % 12 };
+}
