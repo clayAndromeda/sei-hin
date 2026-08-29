@@ -54,6 +54,7 @@
   - モバイル: `BottomNavigation`（画面下部）
   - PC: `AppBar`内の`Tabs`（画面上部）
 - **レスポンシブ**: `useMediaQuery(theme.breakpoints.up('md'))`でPC/モバイル切替
+- **表示中の年月**: `contexts/ViewedMonthProvider`でアプリ全体に共有。カレンダーとサマリー（月次）が同じ年月を参照するため、タブを切り替えても見ていた月が維持される（起動時は常に今月。永続化はしない）
 
 ## セキュリティ
 

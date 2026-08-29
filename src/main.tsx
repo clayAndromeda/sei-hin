@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import App from './App';
+import { ViewedMonthProvider } from './contexts/ViewedMonthProvider';
 
 const theme = createTheme({
   palette: {
@@ -68,7 +69,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <App />
+      <ViewedMonthProvider>
+        <App />
+      </ViewedMonthProvider>
     </ThemeProvider>
   </StrictMode>,
 );

@@ -37,6 +37,7 @@ import {
 } from '../../utils/chart';
 import { FOOD_SUBCATEGORIES } from '../../constants/foodSubcategories';
 import { usePersistedState } from '../../hooks/usePersistedState';
+import { useViewedMonth } from '../../contexts/viewedMonth';
 import { CategoryDonutChart } from './CategoryDonutChart';
 import { FoodFrequencyTrendChart, type FoodTrendMode } from './FoodFrequencyTrendChart';
 import { PeriodTrendChart } from './PeriodTrendChart';
@@ -53,8 +54,8 @@ const SPENDING_TREND_MONTH_OPTIONS = [3, 6, 12];
 
 export function MonthlySummary() {
   const today = new Date();
-  const [year, setYear] = useState(today.getFullYear());
-  const [month, setMonth] = useState(today.getMonth());
+  // 表示中の年月はカレンダーと共有する（タブを切り替えても月が維持される）
+  const { year, month, goToPrevMonth, goToNextMonth, goToCurrentMonth } = useViewedMonth();
   const [fixedCostDialogMode, setFixedCostDialogMode] =
     useState<'add' | 'edit' | null>(null);
   const [fixedCostDialogItem, setFixedCostDialogItem] =
@@ -156,30 +157,6 @@ export function MonthlySummary() {
         )
       : 0;
 
-  const goToPrevMonth = () => {
-    if (month === 0) {
-      setYear(year - 1);
-      setMonth(11);
-    } else {
-      setMonth(month - 1);
-    }
-  };
-
-  const goToNextMonth = () => {
-    if (month === 11) {
-      setYear(year + 1);
-      setMonth(0);
-    } else {
-      setMonth(month + 1);
-    }
-  };
-
-  const goToToday = () => {
-    const now = new Date();
-    setYear(now.getFullYear());
-    setMonth(now.getMonth());
-  };
-
   return (
     <Stack spacing={1.5}>
       {/* 月切り替え */}
@@ -194,7 +171,7 @@ export function MonthlySummary() {
           <ChevronRightIcon />
         </IconButton>
         <Button
-          onClick={goToToday}
+          onClick={goToCurrentMonth}
           size="small"
           startIcon={<TodayIcon />}
           variant="outlined"

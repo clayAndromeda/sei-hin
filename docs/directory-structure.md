@@ -6,6 +6,7 @@ src/
 ├── constants/    # 定数（カテゴリなど）
 ├── services/     # DB、Dropbox、同期、暗号化
 ├── hooks/        # カスタムHooks（支出CRUD、同期、週予算、日別メモ）
+├── contexts/     # 画面をまたいで共有する状態（表示中の年月）
 ├── utils/        # ユーティリティ（日付、金額フォーマット、グラフ変換）
 ├── components/   # UIコンポーネント
 │   ├── Calendar/       # カレンダー画面
